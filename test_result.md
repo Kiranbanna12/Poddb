@@ -555,8 +555,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Automated Sync System - Backend"
-    - "Automated Sync System - Frontend"
+    - "Sync Button Click Fix - Admin Panel"
+    - "Check New Episodes Implementation"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
