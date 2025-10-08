@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Suite for Admin Panel APIs & Authentication
-Tests Admin Authentication, Contribution Management, Sync Management, and User Management
+Backend API Testing Suite for Contribution Submission Flow
+Tests user registration, contribution submission, and retrieval
 """
 
 import requests
@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 # Backend URL from frontend .env
 BASE_URL = "https://account-manager-47.preview.emergentagent.com/api"
 
-class AdminPanelTester:
+class ContributionTester:
     def __init__(self):
         self.base_url = BASE_URL
         self.session = requests.Session()
