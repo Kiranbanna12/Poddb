@@ -820,5 +820,5 @@ class ContributionTester:
         return passed, failed
 
 if __name__ == "__main__":
-    tester = BackendTester()
+    tester = ContributionTester()
     tester.run_all_tests()
