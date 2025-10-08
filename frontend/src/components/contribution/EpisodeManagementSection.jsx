@@ -242,6 +242,26 @@ const EpisodeManagementSection = ({ episodes, onEpisodesChange, mode }) => {
               </div>
             </div>
           ))}
+          
+          {/* Load More Button */}
+          {displayCount < episodes.length && (
+            <div className="text-center py-6">
+              <Button
+                onClick={handleLoadMore}
+                className="bg-[#2A2A2A] hover:bg-[#333333] text-white border border-gray-600"
+              >
+                <ChevronDown className="w-4 h-4 mr-2" />
+                Load More Episodes ({episodes.length - displayCount} remaining)
+              </Button>
+            </div>
+          )}
+          
+          {/* All Episodes Loaded Message */}
+          {displayCount >= episodes.length && episodes.length > 10 && (
+            <div className="text-center py-4 text-gray-400 text-sm">
+              All {episodes.length} episodes displayed
+            </div>
+          )}
         </div>
       )}
 
