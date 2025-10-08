@@ -26,6 +26,10 @@ from models.youtube import (
 from auth.password import hash_password, verify_password
 from auth.auth import create_access_token, get_current_user_id
 
+# Import services
+from services.youtube_service import youtube_service
+from services.cloudinary_service import cloudinary_service
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
