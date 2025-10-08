@@ -163,6 +163,31 @@ def init_database():
         )
     ''')
     
+    # Create episode_guests table for team member episode assignments
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS episode_guests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            episode_id INTEGER NOT NULL,
+            person_id INTEGER NOT NULL,
+            UNIQUE(episode_id, person_id),
+            FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE CASCADE,
+            FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Create podcast_playlists table for YouTube auto-sync
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS podcast_playlists (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            podcast_id INTEGER NOT NULL,
+            playlist_url TEXT NOT NULL,
+            playlist_id TEXT NOT NULL,
+            last_synced_at INTEGER,
+            auto_sync_enabled INTEGER DEFAULT 1,
+            FOREIGN KEY (podcast_id) REFERENCES podcasts(id) ON DELETE CASCADE
+        )
+    ''')
+    
     # Create indexes for better query performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_podcasts_status ON podcasts(status)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_podcasts_rating ON podcasts(rating DESC)')
