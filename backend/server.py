@@ -766,11 +766,12 @@ async def get_episode_people(episode_id: int):
 
 # Import auth routes
 try:
-    from routes import auth, profile, admin, admin_content
+    from routes import auth, profile, admin, admin_content, sync
     api_router.include_router(auth.router)
     api_router.include_router(profile.router)
     api_router.include_router(admin.router)
     api_router.include_router(admin_content.router)
+    api_router.include_router(sync.router)
 except ImportError as e:
     logger.warning(f"Could not import auth routes: {e}")
 
@@ -786,6 +787,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup():
+    """Start scheduler on application startup"""
+    try:
+        logger.info("Starting scheduler service...")
+        scheduler_service.initialize()
+        logger.info("Scheduler service started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start scheduler: {e}")
+
 @app.on_event("shutdown")
 async def shutdown():
+    """Shutdown scheduler on application shutdown"""
     logger.info("Application shutting down")
+    try:
+        scheduler_service.shutdown()
+        logger.info("Scheduler shutdown successfully")
+    except Exception as e:
+        logger.error(f"Error shutting down scheduler: {e}")
