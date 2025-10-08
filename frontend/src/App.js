@@ -4,6 +4,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import HomePage from "./pages/HomePage";
+import RankingsPage from "./pages/RankingsPage";
+import ContributePage from "./pages/ContributePage";
+import { Toaster } from "./components/ui/sonner";
 
 function App() {
   return (
@@ -12,10 +15,11 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/rankings" element={<div className="min-h-screen bg-[#141414] flex items-center justify-center text-white text-2xl">Rankings Page - Coming Soon</div>} />
-          <Route path="/contribute" element={<div className="min-h-screen bg-[#141414] flex items-center justify-center text-white text-2xl">Contribute Page - Coming Soon</div>} />
+          <Route path="/rankings" element={<RankingsPage />} />
+          <Route path="/contribute" element={<ContributePage />} />
         </Routes>
         <Footer />
+        <Toaster />
       </BrowserRouter>
     </div>
   );
