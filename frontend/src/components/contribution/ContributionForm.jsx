@@ -245,16 +245,15 @@ const ContributionForm = ({ initialData = {}, mode = 'manual' }) => {
           />
         </div>
 
-        {mode === 'youtube' && formData.channelName && (
-          <div>
-            <Label className="text-gray-300">Channel/Host</Label>
-            <Input
-              value={formData.channelName}
-              readOnly
-              className="bg-[#2A2A2A] border-gray-600 text-gray-400"
-            />
-          </div>
-        )}
+        <div>
+          <Label className="text-gray-300">Channel/Host</Label>
+          <Input
+            value={formData.channelName}
+            onChange={(e) => updateFormData('channelName', e.target.value)}
+            placeholder="Enter channel or host name"
+            className="bg-[#2A2A2A] border-gray-600 text-white"
+          />
+        </div>
 
         <div>
           <Label className="text-gray-300">Cover Image URL</Label>
