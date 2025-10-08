@@ -1,4 +1,8 @@
 """Seed sample podcast data"""
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent))
+
 from queries import create_podcast, create_episode
 import time
 
