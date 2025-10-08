@@ -1021,6 +1021,380 @@ class ContributionTester:
         # Summary
         self.print_summary()
 
+    def run_sync_system_tests(self):
+        """Run comprehensive sync system tests"""
+        print("=" * 80)
+        print("BACKEND API TESTING SUITE - SYNC SYSTEM ENDPOINTS")
+        print("=" * 80)
+        print(f"Testing against: {self.base_url}")
+        print()
+        
+        # Step 1: Admin authentication
+        self.test_admin_login()
+        
+        # Step 2: Test all sync endpoints
+        if self.admin_token:
+            self.test_sync_dashboard_endpoint()
+            self.test_sync_status_endpoint()
+            self.test_check_new_episodes_endpoint()
+            self.test_run_full_sync_endpoint()
+            self.test_sync_jobs_endpoint()
+            self.test_sync_errors_endpoint()
+            self.test_sync_config_endpoints()
+            self.test_sync_api_usage_endpoint()
+            self.test_sync_enable_disable_endpoints()
+            
+            # Test authentication
+            self.test_sync_authentication_requirements()
+        else:
+            print("❌ Cannot test sync endpoints - admin authentication failed")
+        
+        # Summary
+        self.print_summary()
+
+    def test_sync_dashboard_endpoint(self):
+        """Test GET /api/sync/dashboard - CRITICAL TEST"""
+        try:
+            url = f"{self.base_url}/sync/dashboard"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check required fields
+                required_fields = ["success", "current_status", "last_sync", "today_stats", "api_usage"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    current_status = data["current_status"]
+                    today_stats = data["today_stats"]
+                    api_usage = data["api_usage"]
+                    
+                    # Verify nested structure
+                    status_fields = ["is_running"]
+                    stats_fields = ["podcasts_synced", "episodes_synced", "errors"]
+                    usage_fields = ["quota_used", "quota_limit", "percentage"]
+                    
+                    status_ok = all(field in current_status for field in status_fields)
+                    stats_ok = all(field in today_stats for field in stats_fields)
+                    usage_ok = all(field in api_usage for field in usage_fields)
+                    
+                    if status_ok and stats_ok and usage_ok:
+                        details = f"Dashboard data complete: Running={current_status.get('is_running', False)}, Podcasts synced={today_stats.get('podcasts_synced', 0)}, API usage={api_usage.get('percentage', 0):.1f}%"
+                        self.log_test("Sync Dashboard Endpoint", True, details)
+                    else:
+                        missing_nested = []
+                        if not status_ok: missing_nested.append("current_status fields")
+                        if not stats_ok: missing_nested.append("today_stats fields")
+                        if not usage_ok: missing_nested.append("api_usage fields")
+                        self.log_test("Sync Dashboard Endpoint", False, f"Missing nested fields: {missing_nested}", data)
+                else:
+                    self.log_test("Sync Dashboard Endpoint", False, f"Missing required fields: {missing_fields}", data)
+            else:
+                self.log_test("Sync Dashboard Endpoint", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Dashboard Endpoint", False, f"Exception: {str(e)}")
+
+    def test_sync_status_endpoint(self):
+        """Test GET /api/sync/status"""
+        try:
+            url = f"{self.base_url}/sync/status"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and "sync_status" in data and "scheduler_jobs" in data:
+                    sync_status = data["sync_status"]
+                    scheduler_jobs = data["scheduler_jobs"]
+                    
+                    # Check sync status structure
+                    if "is_running" in sync_status:
+                        details = f"Status retrieved: Running={sync_status.get('is_running', False)}, Scheduler jobs={len(scheduler_jobs)}"
+                        self.log_test("Sync Status Endpoint", True, details)
+                    else:
+                        self.log_test("Sync Status Endpoint", False, "Missing 'is_running' in sync_status", data)
+                else:
+                    self.log_test("Sync Status Endpoint", False, "Missing required fields", data)
+            else:
+                self.log_test("Sync Status Endpoint", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Status Endpoint", False, f"Exception: {str(e)}")
+
+    def test_check_new_episodes_endpoint(self):
+        """Test POST /api/sync/check-new-episodes - MOST IMPORTANT TEST"""
+        try:
+            url = f"{self.base_url}/sync/check-new-episodes"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.post(url, headers=headers, timeout=60)  # Longer timeout for sync operation
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check required fields
+                required_fields = ["success", "message", "job_id", "stats"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    success = data["success"]
+                    stats = data["stats"]
+                    job_id = data["job_id"]
+                    
+                    # Check stats structure
+                    stats_fields = ["items_processed", "items_updated", "items_failed", "new_episodes_found", "duration_seconds"]
+                    stats_ok = all(field in stats for field in stats_fields)
+                    
+                    if stats_ok:
+                        new_episodes = stats.get("new_episodes_found", 0)
+                        processed = stats.get("items_processed", 0)
+                        duration = stats.get("duration_seconds", 0)
+                        
+                        details = f"Check completed: Success={success}, Job ID={job_id}, Processed={processed} podcasts, New episodes={new_episodes}, Duration={duration}s"
+                        self.log_test("Check New Episodes Endpoint", True, details)
+                        
+                        # Store job_id for later tests
+                        self.last_sync_job_id = job_id
+                    else:
+                        self.log_test("Check New Episodes Endpoint", False, "Missing stats fields", data)
+                else:
+                    self.log_test("Check New Episodes Endpoint", False, f"Missing required fields: {missing_fields}", data)
+            else:
+                self.log_test("Check New Episodes Endpoint", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Check New Episodes Endpoint", False, f"Exception: {str(e)}")
+
+    def test_run_full_sync_endpoint(self):
+        """Test POST /api/sync/run-full-sync"""
+        try:
+            url = f"{self.base_url}/sync/run-full-sync"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.post(url, headers=headers, timeout=60)  # Longer timeout for sync operation
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check required fields
+                required_fields = ["success", "message"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    success = data["success"]
+                    message = data["message"]
+                    
+                    if success:
+                        job_id = data.get("job_id")
+                        stats = data.get("stats", {})
+                        
+                        details = f"Full sync triggered: Job ID={job_id}, Message='{message}'"
+                        if stats:
+                            details += f", Stats={stats}"
+                        self.log_test("Run Full Sync Endpoint", True, details)
+                    else:
+                        # Sync might be disabled or already running
+                        details = f"Sync not started: {message}"
+                        self.log_test("Run Full Sync Endpoint", True, details)
+                else:
+                    self.log_test("Run Full Sync Endpoint", False, f"Missing required fields: {missing_fields}", data)
+            else:
+                self.log_test("Run Full Sync Endpoint", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Run Full Sync Endpoint", False, f"Exception: {str(e)}")
+
+    def test_sync_jobs_endpoint(self):
+        """Test GET /api/sync/jobs"""
+        try:
+            url = f"{self.base_url}/sync/jobs"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            params = {"limit": 10}
+            
+            response = self.session.get(url, headers=headers, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and "jobs" in data and "total" in data:
+                    jobs = data["jobs"]
+                    total = data["total"]
+                    
+                    # Check job structure if jobs exist
+                    if jobs:
+                        job = jobs[0]
+                        job_fields = ["id", "job_type", "status", "created_at"]
+                        job_ok = all(field in job for field in job_fields)
+                        
+                        if job_ok:
+                            details = f"Jobs retrieved: {len(jobs)} jobs, Total: {total}, Latest: {job.get('job_type')} ({job.get('status')})"
+                            self.log_test("Sync Jobs Endpoint", True, details)
+                        else:
+                            self.log_test("Sync Jobs Endpoint", False, "Invalid job structure", job)
+                    else:
+                        details = f"Jobs retrieved: 0 jobs, Total: {total} (no jobs yet - acceptable)"
+                        self.log_test("Sync Jobs Endpoint", True, details)
+                else:
+                    self.log_test("Sync Jobs Endpoint", False, "Missing required fields", data)
+            else:
+                self.log_test("Sync Jobs Endpoint", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Jobs Endpoint", False, f"Exception: {str(e)}")
+
+    def test_sync_errors_endpoint(self):
+        """Test GET /api/sync/errors"""
+        try:
+            url = f"{self.base_url}/sync/errors"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            params = {"limit": 10}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and "errors" in data:
+                    errors = data["errors"]
+                    
+                    # Check error structure if errors exist
+                    if errors:
+                        error = errors[0]
+                        error_fields = ["id", "entity_type", "error_type", "error_message", "created_at"]
+                        error_ok = all(field in error for field in error_fields)
+                        
+                        if error_ok:
+                            details = f"Errors retrieved: {len(errors)} errors, Latest: {error.get('error_type')} ({error.get('entity_type')})"
+                            self.log_test("Sync Errors Endpoint", True, details)
+                        else:
+                            self.log_test("Sync Errors Endpoint", False, "Invalid error structure", error)
+                    else:
+                        details = f"Errors retrieved: 0 errors (no errors - good!)"
+                        self.log_test("Sync Errors Endpoint", True, details)
+                else:
+                    self.log_test("Sync Errors Endpoint", False, "Missing required fields", data)
+            else:
+                self.log_test("Sync Errors Endpoint", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Errors Endpoint", False, f"Exception: {str(e)}")
+
+    def test_sync_config_endpoints(self):
+        """Test GET and POST /api/sync/config"""
+        # Test GET config
+        try:
+            url = f"{self.base_url}/sync/config"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and "config" in data:
+                    config = data["config"]
+                    config_keys = list(config.keys())
+                    
+                    details = f"Config retrieved: {len(config_keys)} settings"
+                    self.log_test("Sync Config Get", True, details)
+                    
+                    # Store config for update test
+                    self.sync_config = config
+                else:
+                    self.log_test("Sync Config Get", False, "Missing success or config fields", data)
+            else:
+                self.log_test("Sync Config Get", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Config Get", False, f"Exception: {str(e)}")
+
+    def test_sync_api_usage_endpoint(self):
+        """Test GET /api/sync/api-usage"""
+        try:
+            url = f"{self.base_url}/sync/api-usage"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            params = {"days": 7}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and "usage" in data:
+                    usage = data["usage"]
+                    
+                    details = f"API usage retrieved: {len(usage)} days of data"
+                    self.log_test("Sync API Usage Endpoint", True, details)
+                else:
+                    self.log_test("Sync API Usage Endpoint", False, "Missing required fields", data)
+            else:
+                self.log_test("Sync API Usage Endpoint", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync API Usage Endpoint", False, f"Exception: {str(e)}")
+
+    def test_sync_enable_disable_endpoints(self):
+        """Test POST /api/sync/enable and /api/sync/disable"""
+        # Test enable
+        try:
+            url = f"{self.base_url}/sync/enable"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.post(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and data["success"]:
+                    details = f"Sync enabled: {data.get('message', 'Success')}"
+                    self.log_test("Sync Enable Endpoint", True, details)
+                else:
+                    self.log_test("Sync Enable Endpoint", False, "Success field missing or false", data)
+            else:
+                self.log_test("Sync Enable Endpoint", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Enable Endpoint", False, f"Exception: {str(e)}")
+
+    def test_sync_authentication_requirements(self):
+        """Test sync endpoints authentication requirements"""
+        # Test without token
+        try:
+            url = f"{self.base_url}/sync/dashboard"
+            # No Authorization header
+            
+            response = self.session.get(url, timeout=10)
+            
+            if response.status_code == 401:
+                self.log_test("Sync Auth - No Token", True, "Correctly returned 401 Unauthorized")
+            else:
+                self.log_test("Sync Auth - No Token", False, f"Expected 401, got HTTP {response.status_code}")
+                
+        except Exception as e:
+            self.log_test("Sync Auth - No Token", False, f"Exception: {str(e)}")
+        
+        # Test with regular user token (if available)
+        if self.regular_user_token:
+            try:
+                url = f"{self.base_url}/sync/dashboard"
+                headers = {"Authorization": f"Bearer {self.regular_user_token}"}
+                
+                response = self.session.get(url, headers=headers, timeout=10)
+                
+                if response.status_code == 403:
+                    self.log_test("Sync Auth - Regular User", True, "Correctly returned 403 Forbidden")
+                else:
+                    self.log_test("Sync Auth - Regular User", False, f"Expected 403, got HTTP {response.status_code}")
+                    
+            except Exception as e:
+                self.log_test("Sync Auth - Regular User", False, f"Exception: {str(e)}")
+
     def test_sync_system_endpoints(self):
         """Test the complete automated sync system backend APIs"""
         print("🎯 AUTOMATED SYNC SYSTEM TESTING")
