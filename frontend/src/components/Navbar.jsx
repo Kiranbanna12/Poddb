@@ -8,6 +8,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const handleSearch = (e) => {
     e.preventDefault();
