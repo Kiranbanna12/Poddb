@@ -363,9 +363,9 @@ async def update_podcast(
 @router.delete("/podcasts/{podcast_id}")
 async def delete_podcast(
     podcast_id: int,
-    permanent: bool = False,
     request: Request,
-    admin = Depends(verify_super_admin if permanent else verify_admin)
+    permanent: bool = False,
+    admin = Depends(verify_admin)
 ):
     """Delete or archive podcast"""
     admin_user_id = admin.get('user_id')
