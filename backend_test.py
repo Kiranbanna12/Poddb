@@ -131,29 +131,39 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("User Login", False, f"Exception: {str(e)}")
 
-    def test_search_categories(self):
-        """Test Suite 2: Smart Search - Categories"""
-        try:
-            url = f"{self.base_url}/search/categories"
-            params = {"q": "tech", "limit": 5}
+    def test_jwt_token_verification(self):
+        """Test Suite 1: Authentication Flow - JWT Token Verification"""
+        if not self.regular_user_token:
+            self.log_test("JWT Token Verification", False, "No token available (registration/login failed)")
+            return
             
-            response = self.session.get(url, params=params, timeout=10)
+        try:
+            url = f"{self.base_url}/auth/me"
+            headers = {"Authorization": f"Bearer {self.regular_user_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if isinstance(data, list):
-                    details = f"Found {len(data)} categories matching 'tech'"
-                    self.log_test("Search Categories", True, details)
+                # Check user data
+                if "id" in data and "email" in data and "role" in data:
+                    # Ensure password_hash is not exposed
+                    if "password_hash" not in data:
+                        details = f"Token valid, User: {data.get('username')}, Role: {data.get('role')}"
+                        self.log_test("JWT Token Verification", True, details)
+                    else:
+                        self.log_test("JWT Token Verification", False, 
+                                    "Security issue: password_hash exposed in response", data)
                 else:
-                    self.log_test("Search Categories", False, 
-                                "Response should be an array", data)
+                    self.log_test("JWT Token Verification", False, 
+                                "Missing required user fields", data)
             else:
-                self.log_test("Search Categories", False, 
+                self.log_test("JWT Token Verification", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Search Categories", False, f"Exception: {str(e)}")
+            self.log_test("JWT Token Verification", False, f"Exception: {str(e)}")
 
     def test_add_new_category(self):
         """Test Suite 2: Smart Search - Add New Category"""
