@@ -1,14 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Star, TrendingUp, Users, PlayCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { mockPodcasts, mockEpisodes, mockPeople, mockCategories, mockStats, mockNews } from '../mock';
+import { getStats, getTopPodcasts, getEpisodes, getCategories } from '../services/api';
+import { mockPeople } from '../mock';
 
 const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [topPodcastsIndex, setTopPodcastsIndex] = useState(0);
+  const [stats, setStats] = useState({ totalPodcasts: 0, totalEpisodes: 0, totalPeople: 0 });
+  const [topPodcasts, setTopPodcasts] = useState([]);
+  const [episodes, setEpisodes] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [statsData, podcastsData, episodesData, categoriesData] = await Promise.all([
+        getStats(),
+        getTopPodcasts(8),
+        getEpisodes(8),
+        getCategories()
+      ]);
+      
+      setStats(statsData);
+      setTopPodcasts(podcastsData);
+      setEpisodes(episodesData);
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -26,12 +57,20 @@ const HomePage = () => {
   const scrollTopPodcasts = (direction) => {
     if (direction === 'left' && topPodcastsIndex > 0) {
       setTopPodcastsIndex(topPodcastsIndex - 1);
-    } else if (direction === 'right' && topPodcastsIndex < mockPodcasts.length - 4) {
+    } else if (direction === 'right' && topPodcastsIndex < topPodcasts.length - 4) {
       setTopPodcastsIndex(topPodcastsIndex + 1);
     }
   };
 
-  const visibleTopPodcasts = mockPodcasts.slice(topPodcastsIndex, topPodcastsIndex + 4);
+  const visibleTopPodcasts = topPodcasts.slice(topPodcastsIndex, topPodcastsIndex + 4);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#141414] flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#141414]">
@@ -71,21 +110,21 @@ const HomePage = () => {
               <div className="flex items-center justify-center mb-2">
                 <PlayCircle className="text-[#F5C518]" size={32} />
               </div>
-              <div className="text-3xl font-bold text-[#F5C518] mb-1">{mockStats.totalPodcasts}</div>
+              <div className="text-3xl font-bold text-[#F5C518] mb-1">{stats.totalPodcasts}</div>
               <div className="text-[#AAAAAA] text-sm">Total Podcasts</div>
             </Card>
             <Card className="bg-[#1F1F1F] border-[#2A2A2A] p-6">
               <div className="flex items-center justify-center mb-2">
                 <TrendingUp className="text-[#F5C518]" size={32} />
               </div>
-              <div className="text-3xl font-bold text-[#F5C518] mb-1">{mockStats.totalEpisodes}</div>
+              <div className="text-3xl font-bold text-[#F5C518] mb-1">{stats.totalEpisodes}</div>
               <div className="text-[#AAAAAA] text-sm">Total Episodes</div>
             </Card>
             <Card className="bg-[#1F1F1F] border-[#2A2A2A] p-6">
               <div className="flex items-center justify-center mb-2">
                 <Users className="text-[#F5C518]" size={32} />
               </div>
-              <div className="text-3xl font-bold text-[#F5C518] mb-1">{mockStats.totalPeople}</div>
+              <div className="text-3xl font-bold text-[#F5C518] mb-1">{stats.totalPeople}</div>
               <div className="text-[#AAAAAA] text-sm">Creators & Hosts</div>
             </Card>
           </div>
@@ -111,7 +150,7 @@ const HomePage = () => {
                 variant="outline" 
                 size="sm" 
                 onClick={() => scrollTopPodcasts('right')}
-                disabled={topPodcastsIndex >= mockPodcasts.length - 4}
+                disabled={topPodcastsIndex >= topPodcasts.length - 4}
                 className="bg-[#1F1F1F] border-[#2A2A2A] text-white hover:bg-[#2A2A2A] disabled:opacity-50"
               >
                 <ChevronRight size={20} />
@@ -126,13 +165,13 @@ const HomePage = () => {
               >
                 <div className="relative overflow-hidden">
                   <img 
-                    src={podcast.coverImage} 
+                    src={podcast.cover_image} 
                     alt={podcast.title}
                     className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute top-2 right-2 bg-black/80 px-2 py-1 rounded flex items-center space-x-1">
                     <Star className="text-[#F5C518] fill-[#F5C518]" size={14} />
-                    <span className="text-[#F5C518] font-bold text-sm">{podcast.rating}</span>
+                    <span className="text-[#F5C518] font-bold text-sm">{podcast.rating.toFixed(1)}</span>
                   </div>
                 </div>
                 <div className="p-4">
@@ -147,7 +186,7 @@ const HomePage = () => {
                   </div>
                   <div className="flex items-center justify-between text-xs text-[#AAAAAA]">
                     <span>{formatNumber(podcast.views)} views</span>
-                    <span>{podcast.episodeCount} episodes</span>
+                    <span>{podcast.episode_count} episodes</span>
                   </div>
                 </div>
               </Card>
@@ -161,7 +200,7 @@ const HomePage = () => {
         <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl font-bold text-white mb-8">Latest Episodes</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {mockEpisodes.map((episode) => (
+            {episodes.map((episode) => (
               <Card 
                 key={episode.id} 
                 className="bg-[#1F1F1F] border-[#2A2A2A] hover:border-[#5799EF] transition-all duration-300 hover:shadow-lg hover:shadow-black/50 cursor-pointer group"
@@ -177,11 +216,11 @@ const HomePage = () => {
                   </div>
                 </div>
                 <div className="p-4">
-                  <div className="text-[#5799EF] text-xs mb-1">{episode.podcastTitle}</div>
+                  <div className="text-[#5799EF] text-xs mb-1">{episode.podcast_title}</div>
                   <h3 className="text-white font-semibold text-sm mb-2 line-clamp-2">{episode.title}</h3>
                   <div className="flex items-center justify-between text-xs text-[#AAAAAA]">
                     <span>{formatNumber(episode.views)} views</span>
-                    <span>Ep {episode.episodeNumber}</span>
+                    <span>Ep {episode.episode_number}</span>
                   </div>
                 </div>
               </Card>
@@ -190,7 +229,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Featured People */}
+      {/* Featured People - Using mock data for now */}
       <section className="py-16 px-4">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl font-bold text-white mb-8">Featured Creators</h2>
@@ -217,7 +256,7 @@ const HomePage = () => {
         <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl font-bold text-white mb-8">Browse by Category</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
-            {mockCategories.map((category) => (
+            {categories.map((category) => (
               <Card 
                 key={category.id} 
                 className="bg-[#1F1F1F] border-[#2A2A2A] hover:border-[#5799EF] transition-all duration-300 hover:shadow-lg hover:shadow-black/50 cursor-pointer p-6 text-center group"
@@ -228,7 +267,7 @@ const HomePage = () => {
                   </div>
                 </div>
                 <h3 className="text-white font-semibold mb-1">{category.name}</h3>
-                <p className="text-[#AAAAAA] text-sm">{category.count} podcasts</p>
+                <p className="text-[#AAAAAA] text-sm">{category.podcast_count} podcasts</p>
               </Card>
             ))}
           </div>
