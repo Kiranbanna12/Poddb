@@ -98,7 +98,7 @@ All frontend and backend components have been successfully implemented and linke
 - `google-auth-oauthlib>=1.2.0`
 
 ### Configuration
-- **Backend URL**: `https://auth-doctor.preview.emergentagent.com/api`
+- **Backend URL**: `https://podcast-manager.preview.emergentagent.com/api`
 - **YouTube API Key**: Configured in `/app/backend/.env`
 - **Cloudinary**: Configured in `/app/backend/.env`
 
@@ -217,9 +217,9 @@ All frontend and backend components have been successfully implemented and linke
 
 ## 🚀 How to Access
 
-1. **Frontend**: https://auth-doctor.preview.emergentagent.com
-2. **Contribution Page**: https://auth-doctor.preview.emergentagent.com/contribute
-3. **Backend API**: https://auth-doctor.preview.emergentagent.com/api
+1. **Frontend**: https://podcast-manager.preview.emergentagent.com
+2. **Contribution Page**: https://podcast-manager.preview.emergentagent.com/contribute
+3. **Backend API**: https://podcast-manager.preview.emergentagent.com/api
 
 ---
 

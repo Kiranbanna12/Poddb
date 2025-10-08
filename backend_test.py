@@ -10,7 +10,7 @@ import sys
 from typing import Dict, Any, Optional
 
 # Backend URL from frontend .env
-BASE_URL = "https://auth-doctor.preview.emergentagent.com/api"
+BASE_URL = "https://podcast-manager.preview.emergentagent.com/api"
 
 class BackendTester:
     def __init__(self):
