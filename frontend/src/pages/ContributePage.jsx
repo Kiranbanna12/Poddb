@@ -49,8 +49,6 @@ const ContributePage = () => {
   });
 
   const totalSteps = 6;
-  const availableCategories = ['Technology', 'Comedy', 'Business', 'Entertainment', 'Health', 'Sports', 'History', 'True Crime'];
-  const availableLanguages = ['Hindi', 'English', 'Punjabi', 'Tamil', 'Telugu', 'Bengali'];
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
