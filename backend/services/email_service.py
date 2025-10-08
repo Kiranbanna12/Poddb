@@ -188,3 +188,28 @@ PodDB Pro - Automated Sync System
 
 # Singleton instance
 email_service = EmailService()
+
+
+# Placeholder functions for auth routes compatibility
+def send_verification_email(email: str, username: str, verification_token: str) -> bool:
+    """Send verification email (placeholder)"""
+    logger.info(f"Verification email would be sent to {email} for user {username}")
+    return True
+
+
+def send_password_reset_email(email: str, username: str, reset_token: str) -> bool:
+    """Send password reset email (placeholder)"""
+    logger.info(f"Password reset email would be sent to {email} for user {username}")
+    return True
+
+
+def send_password_changed_email(email: str, username: str) -> bool:
+    """Send password changed notification email (placeholder)"""
+    logger.info(f"Password changed email would be sent to {email} for user {username}")
+    return True
+
+
+def send_email_change_verification(email: str, username: str, verification_token: str) -> bool:
+    """Send email change verification (placeholder)"""
+    logger.info(f"Email change verification would be sent to {email} for user {username}")
+    return True
