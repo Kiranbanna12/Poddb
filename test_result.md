@@ -363,12 +363,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Contribution page redesign - Entry options"
-    - "Episode management UI"
-    - "Team management UI with episode assignment"
-    - "YouTube import workflow UI"
-    - "SmartSearchCombobox reusable component"
-    - "ContributionForm integration"
+    - "Authentication - Sign in/Login fix"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
