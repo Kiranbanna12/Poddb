@@ -190,15 +190,18 @@ backend:
 
   - task: "API endpoints for smart search"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Added search endpoints for categories, languages, locations, people with add-new functionality"
+      - working: true
+        agent: "testing"
+        comment: "All smart search endpoints working correctly: /api/search/categories, /api/search/languages, /api/search/locations, /api/search/people. Add-new functionality tested and working for categories and languages."
 
   - task: "API endpoints for people/team management"
     implemented: true
