@@ -12,7 +12,6 @@ import { createContribution, getCategories, getLanguages } from '../services/api
 const ContributePage = () => {
   const [availableCategories, setAvailableCategories] = useState([]);
   const [availableLanguages, setAvailableLanguages] = useState([]);
-  
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
