@@ -492,38 +492,38 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("Admin Access With Regular User Token", False, f"Exception: {str(e)}")
 
-    def test_add_new_location_minimal(self):
-        """Test Suite 5: Contribution Form Fixes - Add New Location (Minimal Data)"""
+    def test_admin_role_verification(self):
+        """Test Suite 6: Authorization Tests - Admin Role Verification"""
+        if not self.admin_token:
+            self.log_test("Admin Role Verification", False, "No admin token available")
+            return
+            
         try:
-            url = f"{self.base_url}/search/locations/add"
-            params = {
-                "location": "Delhi"
-                # No state or country
-            }
+            # Test multiple admin endpoints to verify role access
+            endpoints = [
+                "/admin/contributions/stats",
+                "/admin/sync/stats", 
+                "/admin/users"
+            ]
             
-            response = self.session.post(url, params=params, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
+            successful_endpoints = 0
+            for endpoint in endpoints:
+                url = f"{self.base_url}{endpoint}"
+                headers = {"Authorization": f"Bearer {self.admin_token}"}
                 
-                if "location" in data and "name" in data:
-                    # Should just be "Delhi" without commas
-                    expected_name = "Delhi"
-                    if data.get("name") == expected_name:
-                        details = f"Minimal location created: {data['name']}"
-                        self.log_test("Add New Location (Minimal)", True, details)
-                    else:
-                        details = f"Name format incorrect. Expected: {expected_name}, Got: {data.get('name')}"
-                        self.log_test("Add New Location (Minimal)", False, details, data)
-                else:
-                    self.log_test("Add New Location (Minimal)", False, 
-                                "Missing required fields", data)
+                response = self.session.get(url, headers=headers, timeout=10)
+                if response.status_code == 200:
+                    successful_endpoints += 1
+            
+            if successful_endpoints == len(endpoints):
+                details = f"Admin role verified: {successful_endpoints}/{len(endpoints)} endpoints accessible"
+                self.log_test("Admin Role Verification", True, details)
             else:
-                self.log_test("Add New Location (Minimal)", False, 
-                            f"HTTP {response.status_code}: {response.text}")
+                details = f"Admin role issue: only {successful_endpoints}/{len(endpoints)} endpoints accessible"
+                self.log_test("Admin Role Verification", False, details)
                 
         except Exception as e:
-            self.log_test("Add New Location (Minimal)", False, f"Exception: {str(e)}")
+            self.log_test("Admin Role Verification", False, f"Exception: {str(e)}")
 
     def test_user_registration_and_login(self):
         """Test Suite 5: Contribution Form Fixes - User Registration and Login"""
