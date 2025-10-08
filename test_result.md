@@ -536,6 +536,16 @@ frontend:
           8. Added all sync API functions to adminApi.js
           9. Route added to App.js: /admin/sync (admin-only protected route)
           10. IMDB-inspired dark theme (#0D0D0D background, #1A1A1A cards, yellow accents)
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Fixed sync button click issue in SyncManagementPage.jsx:
+          1. Removed !syncEnabled from button disabled condition
+          2. Buttons now only disabled during active syncing (syncing state)
+          3. Added conditional className for better visual feedback
+          4. Cursor changes to pointer when clickable, not-allowed when disabled
+          5. Opacity changes to show disabled state clearly
+          6. Now users can click sync buttons even when sync system is disabled
 
 metadata:
   created_by: "main_agent"
