@@ -276,8 +276,12 @@ async def login(credentials: UserLogin):
         # Remove password_hash from response
         user.pop('password_hash', None)
         
-        # Create JWT token
-        token = create_access_token({"user_id": user['id'], "email": user['email']})
+        # Create JWT token with role
+        token = create_access_token({
+            "user_id": user['id'], 
+            "email": user['email'],
+            "role": user.get('role', 'user')
+        })
         
         return {
             "success": True,
