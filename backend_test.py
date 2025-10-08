@@ -270,29 +270,35 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("Admin Contributions List", False, f"Exception: {str(e)}")
 
-    def test_search_locations(self):
-        """Test Suite 2: Smart Search - Locations"""
-        try:
-            url = f"{self.base_url}/search/locations"
-            params = {"q": "mumbai", "limit": 5}
+    def test_admin_contributions_filter_status(self):
+        """Test Suite 3: Admin Contribution APIs - Filter by Status"""
+        if not self.admin_token:
+            self.log_test("Admin Contributions Filter Status", False, "No admin token available")
+            return
             
-            response = self.session.get(url, params=params, timeout=10)
+        try:
+            url = f"{self.base_url}/admin/contributions"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            params = {"status": "pending"}
+            
+            response = self.session.get(url, headers=headers, params=params, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if isinstance(data, list):
-                    details = f"Found {len(data)} locations matching 'mumbai'"
-                    self.log_test("Search Locations", True, details)
+                if "success" in data and data["success"] and "contributions" in data:
+                    contributions = data["contributions"]
+                    details = f"Retrieved {len(contributions)} pending contributions"
+                    self.log_test("Admin Contributions Filter Status", True, details)
                 else:
-                    self.log_test("Search Locations", False, 
-                                "Response should be an array", data)
+                    self.log_test("Admin Contributions Filter Status", False, 
+                                "Missing 'success' or 'contributions' in response", data)
             else:
-                self.log_test("Search Locations", False, 
+                self.log_test("Admin Contributions Filter Status", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Search Locations", False, f"Exception: {str(e)}")
+            self.log_test("Admin Contributions Filter Status", False, f"Exception: {str(e)}")
 
     def test_search_people(self):
         """Test Suite 2: Smart Search - People"""
