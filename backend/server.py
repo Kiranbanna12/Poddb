@@ -243,8 +243,12 @@ async def register(user: UserCreate):
         # Remove password_hash from response
         new_user.pop('password_hash', None)
         
-        # Create JWT token
-        token = create_access_token({"user_id": new_user['id'], "email": new_user['email']})
+        # Create JWT token with role
+        token = create_access_token({
+            "user_id": new_user['id'], 
+            "email": new_user['email'],
+            "role": new_user.get('role', 'user')
+        })
         
         return {
             "user": new_user,
