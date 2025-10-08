@@ -38,65 +38,55 @@ class AdminPanelTester:
             print(f"   Response: {response_data}")
         print()
 
-    def test_youtube_fetch_playlist(self):
-        """Test Suite 1: YouTube API Integration - Fetch Playlist"""
+    def test_user_registration(self):
+        """Test Suite 1: Authentication Flow - User Registration"""
         try:
-            url = f"{self.base_url}/youtube/fetch-playlist"
+            url = f"{self.base_url}/auth/register"
             payload = {
-                "playlist_url": "https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"
+                "username": "testuser2024",
+                "email": "testuser2024@example.com",
+                "password": "TestPass123!",
+                "full_name": "Test User 2024"
             }
             
-            response = self.session.post(url, json=payload, timeout=30)
+            response = self.session.post(url, json=payload, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Verify response structure
-                if "playlist" in data and "episodes" in data:
-                    playlist = data["playlist"]
-                    episodes = data["episodes"]
+                # Check required fields
+                if "token" in data and "user" in data:
+                    user = data["user"]
+                    token = data["token"]
                     
-                    # Check playlist details
-                    required_playlist_fields = ["title", "description", "channel_name"]
-                    missing_fields = [field for field in required_playlist_fields if field not in playlist]
-                    
-                    if missing_fields:
-                        self.log_test("YouTube Fetch Playlist", False, 
-                                    f"Missing playlist fields: {missing_fields}", data)
-                        return
-                    
-                    # Check if episodes array exists and has content
-                    if not isinstance(episodes, list):
-                        self.log_test("YouTube Fetch Playlist", False, 
-                                    "Episodes should be an array", data)
-                        return
-                    
-                    # Check for Cloudinary URLs if episodes exist
-                    cloudinary_check = True
-                    if episodes:
-                        for episode in episodes[:3]:  # Check first 3 episodes
-                            if "thumbnail_cloudinary" not in episode:
-                                cloudinary_check = False
-                                break
-                    
-                    details = f"Playlist: {playlist.get('title', 'N/A')}, Episodes: {len(episodes)}"
-                    if cloudinary_check and episodes:
-                        details += ", Cloudinary URLs present"
-                    elif not episodes:
-                        details += ", No episodes found (may be empty playlist)"
-                    else:
-                        details += ", Cloudinary URLs missing"
-                    
-                    self.log_test("YouTube Fetch Playlist", True, details)
+                    # Verify JWT token structure
+                    try:
+                        import jwt
+                        decoded = jwt.decode(token, options={"verify_signature": False})
+                        if "user_id" in decoded and "email" in decoded and "role" in decoded:
+                            self.regular_user_token = token
+                            self.test_user_id = user.get("id")
+                            details = f"User created: {user.get('username')}, Role: {decoded.get('role')}"
+                            self.log_test("User Registration", True, details)
+                        else:
+                            self.log_test("User Registration", False, 
+                                        "JWT token missing required fields (user_id, email, role)", decoded)
+                    except Exception as jwt_error:
+                        self.log_test("User Registration", False, f"JWT decode error: {jwt_error}")
                 else:
-                    self.log_test("YouTube Fetch Playlist", False, 
-                                "Missing 'playlist' or 'episodes' in response", data)
+                    self.log_test("User Registration", False, 
+                                "Missing 'token' or 'user' in response", data)
+            elif response.status_code == 400:
+                # User might already exist
+                self.log_test("User Registration", True, "User already exists (acceptable)")
+                # Try to login instead
+                self.test_user_login()
             else:
-                self.log_test("YouTube Fetch Playlist", False, 
+                self.log_test("User Registration", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("YouTube Fetch Playlist", False, f"Exception: {str(e)}")
+            self.log_test("User Registration", False, f"Exception: {str(e)}")
 
     def test_youtube_fetch_video(self):
         """Test Suite 1: YouTube API Integration - Fetch Single Video"""
