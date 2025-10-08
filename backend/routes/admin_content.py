@@ -7,13 +7,13 @@ from typing import Optional, List, Dict, Any
 import json
 import time
 
-from ..middleware.admin_middleware import verify_admin, verify_super_admin, get_user_from_token
-from ..database import admin_queries, sync_queries
-from ..database.queries import (
+from middleware.admin_middleware import verify_admin, verify_super_admin, get_user_from_token
+from database import admin_queries, sync_queries
+from database.queries import (
     create_podcast, create_episode, create_person,
     get_podcast_by_id, get_episode_by_id, get_person_by_id
 )
-from ..services.email_service import (
+from services.email_service import (
     send_contribution_approved_email,
     send_contribution_rejected_email,
     send_content_updated_email
