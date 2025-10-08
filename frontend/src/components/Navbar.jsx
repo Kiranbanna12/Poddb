@@ -62,6 +62,13 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <>
+                {(user?.role === 'admin' || user?.role === 'moderator') && (
+                  <Link to="/admin">
+                    <Button variant="ghost" size="sm" className="text-[#F5C518] hover:text-[#F5C518] hover:bg-[#1F1F1F] font-medium">
+                      Admin Panel
+                    </Button>
+                  </Link>
+                )}
                 <Link to="/profile">
                   <Button variant="ghost" size="sm" className="text-white hover:text-[#5799EF] hover:bg-[#1F1F1F]">
                     <User size={18} className="mr-2" />
