@@ -314,16 +314,14 @@ metadata:
 
 test_plan:
   current_focus:
-    - "YouTube API service integration"
-    - "Cloudinary image upload service"
-    - "API endpoints for YouTube integration"
-    - "API endpoints for smart search"
-    - "API endpoints for people/team management"
-    - "API endpoints for episode management"
+    - "Contribution page redesign - Entry options"
+    - "Episode management UI"
+    - "Team management UI with episode assignment"
+    - "YouTube import workflow UI"
+    - "SmartSearchCombobox reusable component"
+    - "ContributionForm integration"
   stuck_tasks: 
-    - "YouTube API service integration"
-    - "API endpoints for YouTube integration"
-    - "API endpoints for episode management"
+    - "YouTube API service integration (API not enabled - 403 error)"
   test_all: false
   test_priority: "high_first"
 
