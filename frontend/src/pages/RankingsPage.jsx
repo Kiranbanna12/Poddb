@@ -99,7 +99,7 @@ const RankingsPage = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-[#2A2A2A] border-[#3A3A3A]">
                   <SelectItem value="all" className="text-white hover:bg-[#3A3A3A]">All Categories</SelectItem>
-                  {mockCategories.map(cat => (
+                  {categories.map(cat => (
                     <SelectItem key={cat.id} value={cat.name} className="text-white hover:bg-[#3A3A3A]">
                       {cat.name}
                     </SelectItem>
