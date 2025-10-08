@@ -165,33 +165,47 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("JWT Token Verification", False, f"Exception: {str(e)}")
 
-    def test_add_new_category(self):
-        """Test Suite 2: Smart Search - Add New Category"""
+    def test_admin_login(self):
+        """Test Suite 2: Admin Authentication - Admin Login"""
         try:
-            url = f"{self.base_url}/search/categories/add"
-            params = {
-                "name": "TestCategory",
-                "description": "Test Description",
-                "icon": "TestIcon"
+            url = f"{self.base_url}/auth/login"
+            payload = {
+                "identifier": "kiranbanna12@gmail.com",
+                "password": "Admin1234!@#"
             }
             
-            response = self.session.post(url, params=params, timeout=10)
+            response = self.session.post(url, json=payload, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if "id" in data and "slug" in data:
-                    details = f"Created category with ID: {data['id']}, Slug: {data.get('slug', 'N/A')}"
-                    self.log_test("Add New Category", True, details)
+                # Check required fields
+                if "success" in data and data["success"] and "token" in data and "user" in data:
+                    user = data["user"]
+                    token = data["token"]
+                    
+                    # Verify JWT token has admin role
+                    try:
+                        import jwt
+                        decoded = jwt.decode(token, options={"verify_signature": False})
+                        if decoded.get("role") == "admin":
+                            self.admin_token = token
+                            details = f"Admin login successful: {user.get('email')}, Role: {decoded.get('role')}"
+                            self.log_test("Admin Login", True, details)
+                        else:
+                            self.log_test("Admin Login", False, 
+                                        f"Expected admin role, got: {decoded.get('role')}", decoded)
+                    except Exception as jwt_error:
+                        self.log_test("Admin Login", False, f"JWT decode error: {jwt_error}")
                 else:
-                    self.log_test("Add New Category", False, 
-                                "Missing 'id' or 'slug' in response", data)
+                    self.log_test("Admin Login", False, 
+                                "Missing required fields in response", data)
             else:
-                self.log_test("Add New Category", False, 
+                self.log_test("Admin Login", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Add New Category", False, f"Exception: {str(e)}")
+            self.log_test("Admin Login", False, f"Exception: {str(e)}")
 
     def test_search_languages(self):
         """Test Suite 2: Smart Search - Languages"""
