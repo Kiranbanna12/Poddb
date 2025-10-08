@@ -198,22 +198,70 @@ def init_database():
     ''')
 
     
-    # Create contributions table
+    # Create contributions table (enhanced for admin review)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS contributions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             podcast_id INTEGER,
-            type TEXT DEFAULT 'new',
-            status TEXT DEFAULT 'pending',
+            contribution_type TEXT NOT NULL CHECK(contribution_type IN ('new_podcast', 'update_podcast', 'new_episode', 'new_person')),
+            submitted_data TEXT NOT NULL,
+            status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'in_review', 'approved', 'rejected')),
             rejection_reason TEXT,
-            data TEXT,
-            created_at INTEGER NOT NULL,
+            admin_notes TEXT,
+            reviewed_by INTEGER,
             reviewed_at INTEGER,
-            reviewer_id INTEGER,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER DEFAULT (strftime('%s', 'now')),
             FOREIGN KEY (user_id) REFERENCES users(id),
-            FOREIGN KEY (podcast_id) REFERENCES podcasts(id),
-            FOREIGN KEY (reviewer_id) REFERENCES users(id)
+            FOREIGN KEY (podcast_id) REFERENCES podcasts(id) ON DELETE CASCADE,
+            FOREIGN KEY (reviewed_by) REFERENCES users(id)
+        )
+    ''')
+    
+    # Create contribution_changes table for partial approvals
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS contribution_changes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            contribution_id INTEGER NOT NULL,
+            field_name TEXT NOT NULL,
+            original_value TEXT,
+            submitted_value TEXT,
+            admin_edited_value TEXT,
+            status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected', 'modified')),
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            FOREIGN KEY (contribution_id) REFERENCES contributions(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Create admin_activity_logs table for audit trail
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS admin_activity_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            admin_user_id INTEGER NOT NULL,
+            action_type TEXT NOT NULL,
+            entity_type TEXT,
+            entity_id INTEGER,
+            action_details TEXT,
+            ip_address TEXT,
+            user_agent TEXT,
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            FOREIGN KEY (admin_user_id) REFERENCES users(id)
+        )
+    ''')
+    
+    # Create notifications table for in-app notifications
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            link TEXT,
+            is_read INTEGER DEFAULT 0,
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     ''')
     
