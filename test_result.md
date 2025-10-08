@@ -226,9 +226,9 @@ backend:
 
   - task: "API endpoints for episode management"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
@@ -238,6 +238,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "Mixed results: GET /api/podcasts/{id}/episodes works correctly. POST /api/episodes/import fails due to YouTube API dependency (same 403 accessNotConfigured error). Episode management structure is correct but blocked by YouTube API issue."
+      - working: true
+        agent: "testing"
+        comment: "RESOLVED: All episode management endpoints now working! GET /api/podcasts/{id}/episodes returns proper episode arrays. POST /api/episodes/import working in preview mode with YouTube integration. Episode import preview successfully processes video data with Cloudinary thumbnails."
 
 frontend:
   - task: "Contribution page redesign - Entry options"
