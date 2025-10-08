@@ -393,33 +393,36 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("Admin Sync History", False, f"Exception: {str(e)}")
 
-    def test_search_people_with_query(self):
-        """Test Suite 3: People/Team Management - Search People with Query"""
-        try:
-            url = f"{self.base_url}/search/people"
-            params = {"q": "Test", "limit": 5}
+    def test_admin_users_list(self):
+        """Test Suite 5: Admin User Management APIs - Get Users List"""
+        if not self.admin_token:
+            self.log_test("Admin Users List", False, "No admin token available")
+            return
             
-            response = self.session.get(url, params=params, timeout=10)
+        try:
+            url = f"{self.base_url}/admin/users"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            params = {"page": 1, "limit": 20}
+            
+            response = self.session.get(url, headers=headers, params=params, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if isinstance(data, list):
-                    # Check if our created person is in the results
-                    found_test_host = any(person.get('full_name') == 'Test Host' for person in data)
-                    details = f"Found {len(data)} people matching 'Test'"
-                    if found_test_host:
-                        details += " (includes 'Test Host')"
-                    self.log_test("Search People with Query", True, details)
+                if "users" in data and "total" in data:
+                    users = data["users"]
+                    total = data["total"]
+                    details = f"Retrieved {len(users)} users out of {total} total"
+                    self.log_test("Admin Users List", True, details)
                 else:
-                    self.log_test("Search People with Query", False, 
-                                "Response should be an array", data)
+                    self.log_test("Admin Users List", False, 
+                                "Missing 'users' or 'total' in response", data)
             else:
-                self.log_test("Search People with Query", False, 
+                self.log_test("Admin Users List", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Search People with Query", False, f"Exception: {str(e)}")
+            self.log_test("Admin Users List", False, f"Exception: {str(e)}")
 
     def test_get_podcast_episodes(self):
         """Test Suite 4: Episode Management - Get Podcast Episodes"""
