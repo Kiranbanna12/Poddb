@@ -264,6 +264,25 @@ backend:
         comment: "RESOLVED: All episode management endpoints now working! GET /api/podcasts/{id}/episodes returns proper episode arrays. POST /api/episodes/import working in preview mode with YouTube integration. Episode import preview successfully processes video data with Cloudinary thumbnails."
 
 frontend:
+  - task: "Authentication - Sign in/Login UI fix"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/contexts/AuthContext.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Fixed login flow in frontend:
+          1. Updated AuthContext to use JWT token from backend
+          2. Added localStorage for token storage
+          3. Added axios interceptor to automatically include Authorization header
+          4. Fixed checkAuth to validate token properly
+          5. Updated login function to handle token correctly
+          6. Updated register function to store token after successful registration
+
   - task: "Contribution page redesign - Entry options"
     implemented: true
     working: "NA"
