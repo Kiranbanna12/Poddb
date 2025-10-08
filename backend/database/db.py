@@ -52,6 +52,8 @@ def init_database():
             youtube_video_id TEXT UNIQUE,
             thumbnail TEXT,
             episode_number INTEGER,
+            season_number INTEGER DEFAULT 1,
+            season_title TEXT,
             views INTEGER DEFAULT 0,
             likes INTEGER DEFAULT 0,
             comments INTEGER DEFAULT 0,
