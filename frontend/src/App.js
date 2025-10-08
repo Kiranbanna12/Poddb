@@ -50,6 +50,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/sync"
+              element={
+                <ProtectedRoute requireAdmin={true}>
+                  <SyncManagementPage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
           <Footer />
           <Toaster />
