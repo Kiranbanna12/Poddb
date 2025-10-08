@@ -9,8 +9,9 @@ class UserCreate(UserBase):
     password: str
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    identifier: str  # Can be email or username
     password: str
+    remember_me: Optional[bool] = False
 
 class User(UserBase):
     id: int
