@@ -350,69 +350,74 @@ async def get_user_contributions(user_id: Optional[int] = Depends(get_current_us
 @api_router.post("/youtube/fetch-playlist")
 async def fetch_youtube_playlist(request: YouTubePlaylistRequest):
     """
-    Fetch YouTube playlist details and ALL videos (unlimited).
-    For large playlists (1000+ episodes), thumbnails are uploaded in batches.
+    Fetch YouTube playlist details and videos with pagination support.
+    - max_results: Number of videos to fetch (None = all videos)
+    - start_index: Starting index for pagination (0-based)
+    
+    For initial load, use max_results=10, start_index=0
+    For loading more, use max_results=20, start_index=10, 30, 50...
     """
     try:
         playlist_id = youtube_service.extract_playlist_id(request.playlist_url)
         if not playlist_id:
             raise HTTPException(status_code=400, detail="Invalid YouTube playlist URL")
         
-        # Get playlist details
-        playlist_details = youtube_service.get_playlist_details(playlist_id)
-        logger.info(f"Fetching playlist: {playlist_details['title']} ({playlist_details['item_count']} episodes)")
+        # Get playlist details (only once for start_index=0)
+        playlist_details = None
+        if request.start_index == 0:
+            playlist_details = youtube_service.get_playlist_details(playlist_id)
+            logger.info(f"Fetching playlist: {playlist_details['title']} ({playlist_details['item_count']} episodes)")
+            
+            # Upload playlist thumbnail to Cloudinary
+            try:
+                cover_image_result = cloudinary_service.upload_from_url(
+                    playlist_details['thumbnail'],
+                    folder="podcasts",
+                    public_id=f"playlist_{playlist_id}"
+                )
+                playlist_details['cover_image_cloudinary'] = cover_image_result['secure_url']
+            except Exception as e:
+                logger.warning(f"Failed to upload playlist thumbnail: {e}")
+                playlist_details['cover_image_cloudinary'] = playlist_details['thumbnail']
         
-        # Get ALL videos (unlimited) - this will fetch all episodes regardless of count
-        videos = youtube_service.get_playlist_videos(playlist_id, max_results=None)
-        logger.info(f"Successfully fetched {len(videos)} episodes from playlist")
+        # Get videos with pagination
+        max_results = request.max_results if request.max_results is not None else None
+        start_index = request.start_index if request.start_index is not None else 0
         
-        # Upload playlist thumbnail to Cloudinary
-        try:
-            cover_image_result = cloudinary_service.upload_from_url(
-                playlist_details['thumbnail'],
-                folder="podcasts",
-                public_id=f"playlist_{playlist_id}"
-            )
-            playlist_details['cover_image_cloudinary'] = cover_image_result['secure_url']
-        except Exception as e:
-            logger.warning(f"Failed to upload playlist thumbnail: {e}")
-            playlist_details['cover_image_cloudinary'] = playlist_details['thumbnail']
+        videos = youtube_service.get_playlist_videos(playlist_id, max_results=max_results, start_index=start_index)
+        logger.info(f"Successfully fetched {len(videos)} episodes from playlist (start_index={start_index})")
         
-        # Upload episode thumbnails to Cloudinary in batches
-        # For very large playlists, we'll process in chunks to avoid timeout
-        total_videos = len(videos)
-        batch_size = 100
+        # Upload episode thumbnails to Cloudinary
         uploaded_count = 0
+        for video in videos:
+            try:
+                thumbnail_result = cloudinary_service.download_and_upload_youtube_thumbnail(
+                    video['thumbnail'],
+                    video['video_id'],
+                    folder="episodes"
+                )
+                video['thumbnail_cloudinary'] = thumbnail_result['secure_url']
+                uploaded_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to upload video thumbnail for {video['video_id']}: {e}")
+                video['thumbnail_cloudinary'] = video['thumbnail']
         
-        for i in range(0, total_videos, batch_size):
-            batch = videos[i:i + batch_size]
-            batch_num = (i // batch_size) + 1
-            total_batches = (total_videos + batch_size - 1) // batch_size
-            
-            logger.info(f"Processing thumbnail batch {batch_num}/{total_batches} ({len(batch)} episodes)")
-            
-            for video in batch:
-                try:
-                    thumbnail_result = cloudinary_service.download_and_upload_youtube_thumbnail(
-                        video['thumbnail'],
-                        video['video_id'],
-                        folder="episodes"
-                    )
-                    video['thumbnail_cloudinary'] = thumbnail_result['secure_url']
-                    uploaded_count += 1
-                except Exception as e:
-                    logger.warning(f"Failed to upload video thumbnail for {video['video_id']}: {e}")
-                    video['thumbnail_cloudinary'] = video['thumbnail']
+        logger.info(f"✅ Batch fetch complete: {len(videos)} episodes, {uploaded_count} thumbnails uploaded")
         
-        logger.info(f"✅ Playlist fetch complete: {len(videos)} episodes, {uploaded_count} thumbnails uploaded")
-        
-        return {
-            "playlist": playlist_details,
+        response = {
             "episodes": videos,
-            "total_episodes": len(videos),
+            "fetched_count": len(videos),
+            "start_index": start_index,
             "thumbnails_uploaded": uploaded_count,
-            "message": f"Successfully fetched all {len(videos)} episodes from playlist"
+            "message": f"Successfully fetched {len(videos)} episodes"
         }
+        
+        # Include playlist details only on initial fetch
+        if playlist_details:
+            response["playlist"] = playlist_details
+            response["total_episodes"] = playlist_details['item_count']
+        
+        return response
     except HTTPException:
         raise
     except Exception as e:
