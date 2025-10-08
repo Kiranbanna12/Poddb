@@ -389,3 +389,472 @@ def get_user_contributions(user_id: int) -> List[dict]:
     contributions = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return contributions
+
+
+# People (Team Members) Queries
+
+def search_people(search_term: str, limit: int = 10) -> List[dict]:
+    """Search people by name"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    search_pattern = f"%{search_term}%"
+    cursor.execute('''
+        SELECT id, slug, full_name, role, profile_photo_path
+        FROM people
+        WHERE full_name LIKE ?
+        ORDER BY created_at DESC
+        LIMIT ?
+    ''', (search_pattern, limit))
+    
+    people = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return people
+
+def get_person_by_id(person_id: int) -> Optional[dict]:
+    """Get person by ID"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM people WHERE id = ?", (person_id,))
+    row = cursor.fetchone()
+    
+    conn.close()
+    return dict(row) if row else None
+
+def create_person(data: dict) -> dict:
+    """Create a new person"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    now = int(time.time())
+    slug = create_slug(data['full_name'])
+    
+    # Check if slug exists, make it unique
+    cursor.execute("SELECT COUNT(*) FROM people WHERE slug = ?", (slug,))
+    count = cursor.fetchone()[0]
+    if count > 0:
+        slug = f"{slug}-{now}"
+    
+    cursor.execute('''
+        INSERT INTO people (
+            full_name, slug, bio, profile_photo_path, role, location,
+            date_of_birth, instagram_url, youtube_url, twitter_url,
+            facebook_url, linkedin_url, website_url, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data['full_name'], slug, data.get('bio'), data.get('profile_photo_path'),
+        data.get('role', 'Host'), data.get('location'), data.get('date_of_birth'),
+        data.get('instagram_url'), data.get('youtube_url'), data.get('twitter_url'),
+        data.get('facebook_url'), data.get('linkedin_url'), data.get('website_url'),
+        now
+    ))
+    
+    person_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    return get_person_by_id(person_id)
+
+def get_all_people(limit: int = None) -> List[dict]:
+    """Get all people"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    query = "SELECT * FROM people ORDER BY created_at DESC"
+    if limit:
+        query += f" LIMIT {limit}"
+    
+    cursor.execute(query)
+    people = [dict(row) for row in cursor.fetchall()]
+    
+    conn.close()
+    return people
+
+# Episode-Guest (Team Member Assignment) Queries
+
+def assign_person_to_episodes(person_id: int, episode_ids: List[int]) -> bool:
+    """Assign a person to multiple episodes"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        for episode_id in episode_ids:
+            cursor.execute('''
+                INSERT OR IGNORE INTO episode_guests (episode_id, person_id)
+                VALUES (?, ?)
+            ''', (episode_id, person_id))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        conn.close()
+        raise e
+
+def remove_person_from_episodes(person_id: int, episode_ids: List[int]) -> bool:
+    """Remove a person from multiple episodes"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        placeholders = ','.join(['?'] * len(episode_ids))
+        cursor.execute(f'''
+            DELETE FROM episode_guests 
+            WHERE person_id = ? AND episode_id IN ({placeholders})
+        ''', [person_id] + episode_ids)
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        conn.close()
+        raise e
+
+def get_episodes_by_person(person_id: int) -> List[int]:
+    """Get all episode IDs where a person appears"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT episode_id FROM episode_guests WHERE person_id = ?
+    ''', (person_id,))
+    
+    episode_ids = [row['episode_id'] for row in cursor.fetchall()]
+    conn.close()
+    return episode_ids
+
+def get_people_by_episode(episode_id: int) -> List[dict]:
+    """Get all people in an episode"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT p.* FROM people p
+        JOIN episode_guests eg ON p.id = eg.person_id
+        WHERE eg.episode_id = ?
+    ''', (episode_id,))
+    
+    people = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return people
+
+# Episode Management Queries
+
+def create_episode(data: dict) -> dict:
+    """Create a new episode"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    now = int(time.time())
+    
+    cursor.execute('''
+        INSERT INTO episodes (
+            podcast_id, title, description, youtube_video_id, thumbnail,
+            episode_number, season_number, season_title, duration,
+            published_date, views, likes, comments, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data['podcast_id'], data['title'], data.get('description'),
+        data.get('youtube_video_id'), data.get('thumbnail'),
+        data.get('episode_number', 1), data.get('season_number', 1),
+        data.get('season_title'), data.get('duration'),
+        data.get('published_date', now), data.get('views', 0),
+        data.get('likes', 0), data.get('comments', 0), now
+    ))
+    
+    episode_id = cursor.lastrowid
+    
+    # Update podcast episode count
+    cursor.execute('''
+        UPDATE podcasts 
+        SET episode_count = (SELECT COUNT(*) FROM episodes WHERE podcast_id = ?)
+        WHERE id = ?
+    ''', (data['podcast_id'], data['podcast_id']))
+    
+    conn.commit()
+    conn.close()
+    
+    return get_episode_by_id(episode_id)
+
+def create_episodes_bulk(episodes_data: List[dict]) -> List[dict]:
+    """Create multiple episodes at once"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    now = int(time.time())
+    created_episodes = []
+    
+    try:
+        for data in episodes_data:
+            cursor.execute('''
+                INSERT INTO episodes (
+                    podcast_id, title, description, youtube_video_id, thumbnail,
+                    episode_number, season_number, season_title, duration,
+                    published_date, views, likes, comments, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                data['podcast_id'], data['title'], data.get('description'),
+                data.get('youtube_video_id'), data.get('thumbnail'),
+                data.get('episode_number', 1), data.get('season_number', 1),
+                data.get('season_title'), data.get('duration'),
+                data.get('published_date', now), data.get('views', 0),
+                data.get('likes', 0), data.get('comments', 0), now
+            ))
+            
+            episode_id = cursor.lastrowid
+            created_episodes.append(get_episode_by_id_no_close(cursor, episode_id))
+        
+        # Update podcast episode counts
+        if episodes_data:
+            podcast_id = episodes_data[0]['podcast_id']
+            cursor.execute('''
+                UPDATE podcasts 
+                SET episode_count = (SELECT COUNT(*) FROM episodes WHERE podcast_id = ?)
+                WHERE id = ?
+            ''', (podcast_id, podcast_id))
+        
+        conn.commit()
+        conn.close()
+        return created_episodes
+    except Exception as e:
+        conn.close()
+        raise e
+
+def get_episode_by_id_no_close(cursor, episode_id: int) -> Optional[dict]:
+    """Get episode by ID without closing connection (for bulk operations)"""
+    cursor.execute('''
+        SELECT e.*, p.title as podcast_title 
+        FROM episodes e
+        JOIN podcasts p ON e.podcast_id = p.id
+        WHERE e.id = ?
+    ''', (episode_id,))
+    
+    row = cursor.fetchone()
+    return dict(row) if row else None
+
+def get_episodes_by_podcast(podcast_id: int) -> List[dict]:
+    """Get all episodes for a podcast"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT * FROM episodes 
+        WHERE podcast_id = ?
+        ORDER BY season_number ASC, episode_number ASC
+    ''', (podcast_id,))
+    
+    episodes = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return episodes
+
+def get_next_episode_number(podcast_id: int, season_number: int = 1) -> int:
+    """Get the next episode number for a podcast/season"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT MAX(episode_number) as max_num FROM episodes 
+        WHERE podcast_id = ? AND season_number = ?
+    ''', (podcast_id, season_number))
+    
+    result = cursor.fetchone()
+    conn.close()
+    
+    max_num = result['max_num'] if result and result['max_num'] else 0
+    return max_num + 1
+
+def delete_episode(episode_id: int) -> bool:
+    """Delete an episode"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get podcast_id before deleting
+        cursor.execute("SELECT podcast_id FROM episodes WHERE id = ?", (episode_id,))
+        result = cursor.fetchone()
+        if not result:
+            conn.close()
+            return False
+        
+        podcast_id = result['podcast_id']
+        
+        cursor.execute("DELETE FROM episodes WHERE id = ?", (episode_id,))
+        
+        # Update podcast episode count
+        cursor.execute('''
+            UPDATE podcasts 
+            SET episode_count = (SELECT COUNT(*) FROM episodes WHERE podcast_id = ?)
+            WHERE id = ?
+        ''', (podcast_id, podcast_id))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        conn.close()
+        raise e
+
+# Playlist Auto-Sync Queries
+
+def save_playlist_for_sync(podcast_id: int, playlist_url: str, playlist_id: str) -> bool:
+    """Save playlist for auto-sync"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    now = int(time.time())
+    
+    try:
+        cursor.execute('''
+            INSERT INTO podcast_playlists (podcast_id, playlist_url, playlist_id, last_synced_at)
+            VALUES (?, ?, ?, ?)
+        ''', (podcast_id, playlist_url, playlist_id, now))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        conn.close()
+        raise e
+
+def get_playlists_for_sync() -> List[dict]:
+    """Get all playlists enabled for auto-sync"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT * FROM podcast_playlists 
+        WHERE auto_sync_enabled = 1
+        ORDER BY last_synced_at ASC
+    ''')
+    
+    playlists = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return playlists
+
+def update_playlist_sync_time(playlist_id: int) -> bool:
+    """Update last synced time for a playlist"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    now = int(time.time())
+    
+    cursor.execute('''
+        UPDATE podcast_playlists 
+        SET last_synced_at = ?
+        WHERE id = ?
+    ''', (now, playlist_id))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+# Category and Language Management
+
+def create_category(name: str, description: str = None, icon: str = None) -> dict:
+    """Create a new category"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    slug = create_slug(name)
+    
+    try:
+        cursor.execute('''
+            INSERT INTO categories (name, slug, description, icon)
+            VALUES (?, ?, ?, ?)
+        ''', (name, slug, description, icon))
+        
+        category_id = cursor.lastrowid
+        conn.commit()
+        
+        cursor.execute("SELECT * FROM categories WHERE id = ?", (category_id,))
+        category = dict(cursor.fetchone())
+        
+        conn.close()
+        return category
+    except Exception as e:
+        conn.close()
+        raise e
+
+def search_categories(search_term: str, limit: int = 10) -> List[dict]:
+    """Search categories by name"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    search_pattern = f"%{search_term}%"
+    cursor.execute('''
+        SELECT * FROM categories
+        WHERE name LIKE ?
+        ORDER BY podcast_count DESC
+        LIMIT ?
+    ''', (search_pattern, limit))
+    
+    categories = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return categories
+
+def create_language(code: str, name: str, native_name: str = None) -> dict:
+    """Create a new language"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+            INSERT INTO languages (code, name, native_name)
+            VALUES (?, ?, ?)
+        ''', (code, name, native_name))
+        
+        language_id = cursor.lastrowid
+        conn.commit()
+        
+        cursor.execute("SELECT * FROM languages WHERE id = ?", (language_id,))
+        language = dict(cursor.fetchone())
+        
+        conn.close()
+        return language
+    except Exception as e:
+        conn.close()
+        raise e
+
+def search_languages(search_term: str, limit: int = 10) -> List[dict]:
+    """Search languages by name"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    search_pattern = f"%{search_term}%"
+    cursor.execute('''
+        SELECT * FROM languages
+        WHERE name LIKE ? OR native_name LIKE ?
+        ORDER BY name
+        LIMIT ?
+    ''', (search_pattern, search_pattern, limit))
+    
+    languages = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return languages
+
+def get_distinct_locations(search_term: str = None, limit: int = 10) -> List[dict]:
+    """Get distinct locations from podcasts"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    if search_term:
+        search_pattern = f"%{search_term}%"
+        cursor.execute('''
+            SELECT DISTINCT location, state, country 
+            FROM podcasts 
+            WHERE location IS NOT NULL 
+            AND (location LIKE ? OR state LIKE ? OR country LIKE ?)
+            LIMIT ?
+        ''', (search_pattern, search_pattern, search_pattern, limit))
+    else:
+        cursor.execute('''
+            SELECT DISTINCT location, state, country 
+            FROM podcasts 
+            WHERE location IS NOT NULL 
+            LIMIT ?
+        ''', (limit,))
+    
+    locations = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return locations
