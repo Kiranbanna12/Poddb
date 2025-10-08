@@ -227,10 +227,11 @@ const RankingsPage = () => {
                     </div>
                   </div>
                 </Card>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
-            {filteredPodcasts.length === 0 && (
+            {!loading && filteredPodcasts.length === 0 && (
               <div className="text-center py-16">
                 <p className="text-[#AAAAAA] text-lg">No podcasts found matching your filters.</p>
                 <Button 
