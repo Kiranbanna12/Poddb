@@ -238,7 +238,7 @@ async def register(user: UserCreate):
         
         # Hash password and create user
         password_hash = hash_password(user.password)
-        new_user = queries.create_user(user.username, user.email, password_hash)
+        new_user = queries.create_user(user.username, user.email, password_hash, user.full_name)
         
         # Remove password_hash from response
         new_user.pop('password_hash', None)
