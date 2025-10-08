@@ -13,10 +13,6 @@ const ContributePage = () => {
   const [availableCategories, setAvailableCategories] = useState([]);
   const [availableLanguages, setAvailableLanguages] = useState([]);
   
-  useEffect(() => {
-    loadOptions();
-  }, []);
-
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
