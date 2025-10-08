@@ -130,6 +130,74 @@ def init_database():
         )
     ''')
     
+    # Create sessions table for session management
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_token TEXT NOT NULL UNIQUE,
+            user_id INTEGER NOT NULL,
+            expires INTEGER NOT NULL,
+            device_info TEXT,
+            ip_address TEXT,
+            user_agent TEXT,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Create verification_tokens table for email verification and password reset
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS verification_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            identifier TEXT NOT NULL,
+            token TEXT NOT NULL UNIQUE,
+            expires INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            used INTEGER DEFAULT 0,
+            created_at INTEGER NOT NULL
+        )
+    ''')
+    
+    # Create login_attempts table for security tracking
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS login_attempts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            identifier TEXT NOT NULL,
+            ip_address TEXT,
+            success INTEGER NOT NULL,
+            attempted_at INTEGER NOT NULL
+        )
+    ''')
+    
+    # Create user_activity_logs table for audit trail
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_activity_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            action_type TEXT NOT NULL,
+            action_details TEXT,
+            ip_address TEXT,
+            user_agent TEXT,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Create email_queue table for email management
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS email_queue (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            recipient TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            body TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            created_at INTEGER NOT NULL,
+            sent_at INTEGER
+        )
+    ''')
+
+    
     # Create contributions table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS contributions (
