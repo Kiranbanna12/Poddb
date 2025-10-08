@@ -451,6 +451,76 @@ frontend:
         agent: "main"
         comment: "Already implemented - Multi-step form with smart search integration, uses EpisodeManagementSection and TeamManagementSection components"
 
+  - task: "Automated Sync System - Backend"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/routes/sync.py, /app/backend/services/sync_service.py, /app/backend/services/youtube_sync_service.py, /app/backend/services/analytics_service.py, /app/backend/services/scheduler_service.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Implemented complete automated sync system:
+          1. Database tables already exist (daily_analytics, sync_jobs, sync_errors, youtube_api_usage, sync_config)
+          2. Created /app/backend/routes/sync.py with 15 API endpoints:
+             - GET /api/sync/status - Current sync status
+             - GET /api/sync/dashboard - Dashboard data
+             - POST /api/sync/run-full-sync - Manual full sync trigger
+             - POST /api/sync/check-new-episodes - Check for new episodes
+             - POST /api/sync/sync-podcast/{id} - Sync single podcast
+             - POST /api/sync/recalculate-analytics - Recalculate metrics
+             - GET /api/sync/jobs - Job history with pagination
+             - GET /api/sync/errors - Error logs
+             - POST /api/sync/errors/{id}/resolve - Mark error resolved
+             - GET /api/sync/config - Get configuration
+             - POST /api/sync/config - Update configuration
+             - GET /api/sync/api-usage - YouTube API quota usage
+             - POST /api/sync/test-email - Test email notifications
+             - POST /api/sync/enable - Enable sync system
+             - POST /api/sync/disable - Disable sync system
+          3. Services already implemented:
+             - sync_service: Orchestrates full sync, batching, error handling
+             - youtube_sync_service: Syncs individual podcasts, tracks API usage, detects new episodes
+             - analytics_service: Calculates daily metrics (views_today = today - yesterday)
+             - scheduler_service: APScheduler for automated runs
+          4. Scheduler initialized on server startup with 4 jobs:
+             - Daily sync at 2 AM UTC
+             - New episodes check every 6 hours
+             - Analytics calculation at 3 AM UTC
+             - Weekly cleanup on Sunday 4 AM UTC
+          5. Installed tzlocal dependency for scheduler
+          6. Admin authentication required for all sync endpoints
+
+  - task: "Automated Sync System - Frontend"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/admin/SyncManagementPage.jsx, /app/frontend/src/services/adminApi.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Implemented complete admin sync dashboard:
+          1. Created SyncManagementPage.jsx at /admin/sync
+          2. Features:
+             - Status cards: Current sync status, last sync time, podcasts synced, new episodes, errors
+             - API quota usage progress bar with color coding (red >90%, yellow >70%, green <70%)
+             - Manual action buttons: Run Full Sync, Check New Episodes, Recalculate Analytics
+             - Enable/Disable sync system toggle
+             - 4 tabs: Overview, Jobs, Errors, Config
+          3. Jobs tab: Table showing job history with status badges, duration, processed/updated/failed counts
+          4. Errors tab: List of unresolved errors with resolve button, entity info, timestamps
+          5. Config tab: Editable configuration settings with inline edit functionality
+          6. Overview tab: System information summary
+          7. Auto-refresh every 30 seconds for live updates
+          8. Added all sync API functions to adminApi.js
+          9. Route added to App.js: /admin/sync (admin-only protected route)
+          10. IMDB-inspired dark theme (#0D0D0D background, #1A1A1A cards, yellow accents)
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
@@ -458,7 +528,9 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Automated Sync System - Backend"
+    - "Automated Sync System - Frontend"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
