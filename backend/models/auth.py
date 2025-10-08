@@ -111,7 +111,7 @@ class BanUserRequest(BaseModel):
     reason: str = Field(..., min_length=1, max_length=500)
 
 class UpdateUserRoleRequest(BaseModel):
-    role: str = Field(..., regex="^(user|moderator|admin)$")
+    role: str = Field(..., pattern="^(user|moderator|admin)$")
 
 class UserListResponse(BaseModel):
     users: list[UserResponse]
