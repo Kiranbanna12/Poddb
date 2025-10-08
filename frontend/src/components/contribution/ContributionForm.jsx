@@ -113,9 +113,20 @@ const ContributionForm = ({ initialData = {}, mode = 'manual' }) => {
   const handleLocationSelect = (items) => {
     if (items.length > 0) {
       const selected = items[0];
-      updateFormData('location', selected.location);
-      updateFormData('state', selected.state);
-      updateFormData('country', selected.country);
+      updateFormData('location', selected.location || selected.name);
+      updateFormData('state', selected.state || '');
+      updateFormData('country', selected.country || '');
+    }
+  };
+
+  const handleAddNewLocation = async (data) => {
+    try {
+      const newLocation = await addNewLocation(data.location, data.state, data.country);
+      toast.success('Location added successfully');
+      return newLocation;
+    } catch (error) {
+      console.error('Add location error:', error);
+      throw error;
     }
   };
 
