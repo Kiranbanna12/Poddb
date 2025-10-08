@@ -1740,6 +1740,15 @@ class ContributionTester:
         # Run authentication tests
         self.test_sync_authentication()
         
+        # Run the specific tests requested in the review
+        print("\n🎯 SPECIFIC SYNC ENDPOINT TESTS (FROM REVIEW REQUEST)")
+        print("-" * 60)
+        self.test_sync_dashboard_endpoint()
+        self.test_check_new_episodes_endpoint()
+        self.test_run_full_sync_endpoint()
+        self.test_sync_status_endpoint()
+        self.test_sync_jobs_endpoint()
+        
         # Summary
         self.print_summary()
 
