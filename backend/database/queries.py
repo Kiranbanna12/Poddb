@@ -296,7 +296,7 @@ def get_stats() -> dict:
 
 # User Queries
 
-def create_user(username: str, email: str, password_hash: str) -> dict:
+def create_user(username: str, email: str, password_hash: str, full_name: str = None) -> dict:
     """Create a new user"""
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -305,9 +305,9 @@ def create_user(username: str, email: str, password_hash: str) -> dict:
     
     try:
         cursor.execute('''
-            INSERT INTO users (username, email, password_hash, created_at)
-            VALUES (?, ?, ?, ?)
-        ''', (username, email, password_hash, now))
+            INSERT INTO users (username, email, password_hash, full_name, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (username, email, password_hash, full_name, now, now))
         
         user_id = cursor.lastrowid
         conn.commit()
