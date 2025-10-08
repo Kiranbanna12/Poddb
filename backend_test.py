@@ -424,32 +424,33 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("Admin Users List", False, f"Exception: {str(e)}")
 
-    def test_get_podcast_episodes(self):
-        """Test Suite 4: Episode Management - Get Podcast Episodes"""
-        try:
-            # Test with podcast ID 1 (if exists)
-            url = f"{self.base_url}/podcasts/1/episodes"
+    def test_admin_user_details(self):
+        """Test Suite 5: Admin User Management APIs - Get User Details"""
+        if not self.admin_token or not self.test_user_id:
+            self.log_test("Admin User Details", False, "No admin token or test user ID available")
+            return
             
-            response = self.session.get(url, timeout=10)
+        try:
+            url = f"{self.base_url}/admin/users/{self.test_user_id}"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if isinstance(data, list):
-                    details = f"Found {len(data)} episodes for podcast 1"
-                    self.log_test("Get Podcast Episodes", True, details)
+                if "id" in data and "username" in data and "email" in data and "role" in data:
+                    details = f"Retrieved user details: {data.get('username')} ({data.get('email')})"
+                    self.log_test("Admin User Details", True, details)
                 else:
-                    self.log_test("Get Podcast Episodes", False, 
-                                "Response should be an array", data)
-            elif response.status_code == 404:
-                # Podcast doesn't exist, which is acceptable
-                self.log_test("Get Podcast Episodes", True, "Podcast 1 not found (acceptable)")
+                    self.log_test("Admin User Details", False, 
+                                "Missing required user fields", data)
             else:
-                self.log_test("Get Podcast Episodes", False, 
+                self.log_test("Admin User Details", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Get Podcast Episodes", False, f"Exception: {str(e)}")
+            self.log_test("Admin User Details", False, f"Exception: {str(e)}")
 
     def test_episode_import_preview(self):
         """Test Suite 4: Episode Management - Episode Import Preview"""
