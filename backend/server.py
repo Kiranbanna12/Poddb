@@ -21,6 +21,7 @@ from models.youtube import (
     YouTubeVideoResponse, EpisodeImportRequest, SeasonCreateRequest,
     TeamMemberAssignment
 )
+from models.sync import SyncConfigUpdate, SyncTriggerRequest, EmailTestRequest
 
 # Import auth
 from auth.password import hash_password, verify_password
