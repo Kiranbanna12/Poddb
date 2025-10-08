@@ -91,31 +91,57 @@ const ContributePage = () => {
     ));
   };
 
-  const handleSubmit = () => {
-    console.log('Submitting contribution:', formData);
-    toast({
-      title: "Contribution Submitted!",
-      description: "Your podcast submission is pending review. We'll notify you once it's approved.",
-    });
-    // Reset form
-    setFormData({
-      title: '',
-      description: '',
-      youtubePlaylistId: '',
-      categories: [],
-      languages: [],
-      location: '',
-      website: '',
-      spotifyUrl: '',
-      applePodcastsUrl: '',
-      jioSaavnUrl: '',
-      instagramUrl: '',
-      twitterUrl: '',
-      youtubeUrl: '',
-      teamMembers: [],
-      coverImage: null
-    });
-    setCurrentStep(1);
+  const handleSubmit = async () => {
+    try {
+      const contributionData = {
+        title: formData.title,
+        description: formData.description,
+        youtube_playlist_id: formData.youtubePlaylistId,
+        categories: formData.categories,
+        languages: formData.languages,
+        location: formData.location,
+        website: formData.website,
+        spotify_url: formData.spotifyUrl,
+        apple_podcasts_url: formData.applePodcastsUrl,
+        jiosaavn_url: formData.jioSaavnUrl,
+        instagram_url: formData.instagramUrl,
+        twitter_url: formData.twitterUrl,
+        youtube_url: formData.youtubeUrl,
+        team_members: formData.teamMembers,
+        cover_image: formData.coverImage
+      };
+
+      await createContribution(contributionData);
+      
+      toast.success("Contribution Submitted!", {
+        description: "Your podcast submission is pending review. We'll notify you once it's approved.",
+      });
+      
+      // Reset form
+      setFormData({
+        title: '',
+        description: '',
+        youtubePlaylistId: '',
+        categories: [],
+        languages: [],
+        location: '',
+        website: '',
+        spotifyUrl: '',
+        applePodcastsUrl: '',
+        jioSaavnUrl: '',
+        instagramUrl: '',
+        twitterUrl: '',
+        youtubeUrl: '',
+        teamMembers: [],
+        coverImage: null
+      });
+      setCurrentStep(1);
+    } catch (error) {
+      console.error('Error submitting contribution:', error);
+      toast.error("Submission Failed", {
+        description: error.response?.data?.detail || "Please try again later or make sure you're logged in.",
+      });
+    }
   };
 
   const nextStep = () => {
