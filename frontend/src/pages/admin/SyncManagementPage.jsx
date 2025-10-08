@@ -266,16 +266,24 @@ const SyncManagementPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => handleRunSync('full')}
-              disabled={syncing || !syncEnabled}
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed px-6 py-3 rounded-lg font-medium transition-colors"
+              disabled={syncing}
+              className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+                syncing 
+                  ? 'bg-gray-700 cursor-not-allowed opacity-50' 
+                  : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
+              }`}
             >
               <Play className="w-5 h-5" />
               Run Full Sync
             </button>
             <button
               onClick={() => handleRunSync('new_episodes')}
-              disabled={syncing || !syncEnabled}
-              className="flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-700 disabled:cursor-not-allowed px-6 py-3 rounded-lg font-medium transition-colors"
+              disabled={syncing}
+              className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+                syncing 
+                  ? 'bg-gray-700 cursor-not-allowed opacity-50' 
+                  : 'bg-yellow-600 hover:bg-yellow-700 cursor-pointer'
+              }`}
             >
               <RefreshCw className="w-5 h-5" />
               Check New Episodes
@@ -283,7 +291,11 @@ const SyncManagementPage = () => {
             <button
               onClick={() => handleRunSync('analytics')}
               disabled={syncing}
-              className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed px-6 py-3 rounded-lg font-medium transition-colors"
+              className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+                syncing 
+                  ? 'bg-gray-700 cursor-not-allowed opacity-50' 
+                  : 'bg-green-600 hover:bg-green-700 cursor-pointer'
+              }`}
             >
               <Activity className="w-5 h-5" />
               Recalculate Analytics
