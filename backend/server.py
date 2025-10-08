@@ -29,6 +29,10 @@ from auth.auth import create_access_token, get_current_user_id
 # Import services
 from services.youtube_service import youtube_service
 from services.cloudinary_service import cloudinary_service
+from services.sync_service import sync_service
+from services.scheduler_service import scheduler_service
+from services.email_service import email_service
+from services.analytics_service import analytics_service
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
