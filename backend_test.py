@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Suite for Advanced Contribution Page
-Tests YouTube API integration, Smart Search, People Management, and Episode Management
+Backend API Testing Suite for Admin Panel APIs & Authentication
+Tests Admin Authentication, Contribution Management, Sync Management, and User Management
 """
 
 import requests
@@ -12,13 +12,14 @@ from typing import Dict, Any, Optional
 # Backend URL from frontend .env
 BASE_URL = "https://moderator-hub-4.preview.emergentagent.com/api"
 
-class BackendTester:
+class AdminPanelTester:
     def __init__(self):
         self.base_url = BASE_URL
         self.session = requests.Session()
         self.test_results = []
-        self.created_person_id = None
-        self.auth_token = None
+        self.regular_user_token = None
+        self.admin_token = None
+        self.test_user_id = None
         
     def log_test(self, test_name: str, success: bool, details: str = "", response_data: Any = None):
         """Log test results"""
