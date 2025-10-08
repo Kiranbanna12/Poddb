@@ -705,6 +705,15 @@ async def get_episode_people(episode_id: int):
         logger.error(f"Error getting episode people: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Import auth routes
+try:
+    from routes import auth, profile, admin
+    api_router.include_router(auth.router)
+    api_router.include_router(profile.router)
+    api_router.include_router(admin.router)
+except ImportError as e:
+    logger.warning(f"Could not import auth routes: {e}")
+
 # Include router
 app.include_router(api_router)
 
