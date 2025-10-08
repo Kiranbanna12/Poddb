@@ -33,6 +33,22 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requireAdmin={true}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/contributions"
+              element={
+                <ProtectedRoute requireAdmin={true}>
+                  <ContributionsPage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
           <Footer />
           <Toaster />
