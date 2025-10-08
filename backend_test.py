@@ -300,29 +300,35 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("Admin Contributions Filter Status", False, f"Exception: {str(e)}")
 
-    def test_search_people(self):
-        """Test Suite 2: Smart Search - People"""
-        try:
-            url = f"{self.base_url}/search/people"
-            params = {"q": "", "limit": 5}
+    def test_admin_contributions_filter_type(self):
+        """Test Suite 3: Admin Contribution APIs - Filter by Type"""
+        if not self.admin_token:
+            self.log_test("Admin Contributions Filter Type", False, "No admin token available")
+            return
             
-            response = self.session.get(url, params=params, timeout=10)
+        try:
+            url = f"{self.base_url}/admin/contributions"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            params = {"contribution_type": "new_podcast"}
+            
+            response = self.session.get(url, headers=headers, params=params, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if isinstance(data, list):
-                    details = f"Found {len(data)} people (may be empty initially)"
-                    self.log_test("Search People", True, details)
+                if "success" in data and data["success"] and "contributions" in data:
+                    contributions = data["contributions"]
+                    details = f"Retrieved {len(contributions)} new_podcast contributions"
+                    self.log_test("Admin Contributions Filter Type", True, details)
                 else:
-                    self.log_test("Search People", False, 
-                                "Response should be an array", data)
+                    self.log_test("Admin Contributions Filter Type", False, 
+                                "Missing 'success' or 'contributions' in response", data)
             else:
-                self.log_test("Search People", False, 
+                self.log_test("Admin Contributions Filter Type", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Search People", False, f"Exception: {str(e)}")
+            self.log_test("Admin Contributions Filter Type", False, f"Exception: {str(e)}")
 
     def test_create_person(self):
         """Test Suite 3: People/Team Management - Create Person"""
