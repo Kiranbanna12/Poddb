@@ -475,6 +475,22 @@ async def search_locations_endpoint(q: str = "", limit: int = 10):
         logger.error(f"Error searching locations: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.post("/search/locations/add")
+async def add_new_location(location: str, state: str = "", country: str = ""):
+    """Add a new location (returns the location data for form)"""
+    try:
+        # For locations, we don't store them separately
+        # Just return the formatted location data for the form
+        return {
+            "location": location,
+            "state": state,
+            "country": country,
+            "name": f"{location}{', ' + state if state else ''}{', ' + country if country else ''}"
+        }
+    except Exception as e:
+        logger.error(f"Error creating location: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/search/people")
 async def search_people_endpoint(q: str = "", limit: int = 10):
     """Search people (team members) by name"""
