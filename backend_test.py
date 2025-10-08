@@ -600,14 +600,14 @@ class BackendTester:
         try:
             url = f"{self.base_url}/contributions"
             payload = {
-                "podcast_name": "Test Podcast for Contribution",
+                "title": "Test Podcast for Contribution",
                 "description": "This is a test podcast submission",
-                "category": "Technology",
-                "language": "English",
+                "youtube_playlist_id": "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
+                "categories": ["Technology"],
+                "languages": ["English"],
                 "location": "Mumbai, Maharashtra, India",
-                "host_name": "Test Host Name",
-                "website_url": "https://testpodcast.com",
-                "rss_feed_url": "https://testpodcast.com/feed.xml"
+                "website": "https://testpodcast.com",
+                "team_members": []
             }
             
             # Add Authorization header manually
@@ -639,10 +639,11 @@ class BackendTester:
         try:
             url = f"{self.base_url}/contributions"
             payload = {
-                "podcast_name": "Test Podcast Unauthorized",
+                "title": "Test Podcast Unauthorized",
                 "description": "This should fail without auth",
-                "category": "Technology",
-                "language": "English"
+                "youtube_playlist_id": "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
+                "categories": ["Technology"],
+                "languages": ["English"]
             }
             
             # Don't include Authorization header
