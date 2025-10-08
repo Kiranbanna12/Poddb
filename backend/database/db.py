@@ -201,6 +201,8 @@ def init_database():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_podcasts_status ON podcasts(status)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_podcasts_rating ON podcasts(rating DESC)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_episodes_podcast ON episodes(podcast_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_episode_guests_episode ON episode_guests(episode_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_episode_guests_person ON episode_guests(person_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_contributions_user ON contributions(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_contributions_status ON contributions(status)')
     
