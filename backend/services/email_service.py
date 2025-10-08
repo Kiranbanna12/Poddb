@@ -1,627 +1,190 @@
-"""
-Email service for authentication system
-Handles email template generation and queuing
-"""
-import os
+"""Email Service for sending notifications via SMTP"""
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import Optional
-from database.auth_queries import queue_email
+import logging
+from database.db import get_db_connection
 
-# Get frontend URL from environment
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+logger = logging.getLogger(__name__)
 
-def generate_verification_email_html(username: str, verification_link: str) -> str:
-    """Generate HTML for email verification email"""
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                background-color: #000000;
-                color: #ffffff;
-                margin: 0;
-                padding: 0;
-            }}
-            .container {{
-                max-width: 600px;
-                margin: 40px auto;
-                background-color: #1F1F1F;
-                border-radius: 8px;
-                padding: 40px;
-            }}
-            .logo {{
-                text-align: center;
-                margin-bottom: 30px;
-            }}
-            .logo h1 {{
-                color: #F5C518;
-                font-size: 32px;
-                margin: 0;
-            }}
-            .content {{
-                line-height: 1.6;
-            }}
-            .button {{
-                display: inline-block;
-                background-color: #5799EF;
-                color: #ffffff;
-                padding: 14px 30px;
-                text-decoration: none;
-                border-radius: 4px;
-                margin: 20px 0;
-                font-weight: bold;
-            }}
-            .footer {{
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #333;
-                font-size: 12px;
-                color: #999;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="logo">
-                <h1>PodDB Pro</h1>
-            </div>
-            <div class="content">
-                <h2>Welcome to PodDB Pro!</h2>
-                <p>Hi {username},</p>
-                <p>Thanks for signing up! Please verify your email address to activate your account.</p>
-                <p style="text-align: center;">
-                    <a href="{verification_link}" class="button">Verify Email Address</a>
-                </p>
-                <p>Or copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; color: #5799EF;">{verification_link}</p>
-                <p>This link will expire in 24 hours.</p>
-                <p>If you didn't create an account, you can safely ignore this email.</p>
-            </div>
-            <div class="footer">
-                <p>&copy; 2025 PodDB Pro. All rights reserved.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
 
-def generate_password_reset_email_html(username: str, reset_link: str) -> str:
-    """Generate HTML for password reset email"""
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                background-color: #000000;
-                color: #ffffff;
-                margin: 0;
-                padding: 0;
-            }}
-            .container {{
-                max-width: 600px;
-                margin: 40px auto;
-                background-color: #1F1F1F;
-                border-radius: 8px;
-                padding: 40px;
-            }}
-            .logo {{
-                text-align: center;
-                margin-bottom: 30px;
-            }}
-            .logo h1 {{
-                color: #F5C518;
-                font-size: 32px;
-                margin: 0;
-            }}
-            .content {{
-                line-height: 1.6;
-            }}
-            .button {{
-                display: inline-block;
-                background-color: #5799EF;
-                color: #ffffff;
-                padding: 14px 30px;
-                text-decoration: none;
-                border-radius: 4px;
-                margin: 20px 0;
-                font-weight: bold;
-            }}
-            .warning {{
-                background-color: #D9534F;
-                color: #ffffff;
-                padding: 12px;
-                border-radius: 4px;
-                margin: 20px 0;
-            }}
-            .footer {{
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #333;
-                font-size: 12px;
-                color: #999;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="logo">
-                <h1>PodDB Pro</h1>
-            </div>
-            <div class="content">
-                <h2>Password Reset Request</h2>
-                <p>Hi {username},</p>
-                <p>We received a request to reset your password. Click the button below to create a new password:</p>
-                <p style="text-align: center;">
-                    <a href="{reset_link}" class="button">Reset Password</a>
-                </p>
-                <p>Or copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; color: #5799EF;">{reset_link}</p>
-                <p>This link will expire in 1 hour.</p>
-                <div class="warning">
-                    <strong>Security Notice:</strong> If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
-                </div>
-            </div>
-            <div class="footer">
-                <p>&copy; 2025 PodDB Pro. All rights reserved.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-def generate_password_changed_email_html(username: str) -> str:
-    """Generate HTML for password changed notification"""
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                background-color: #000000;
-                color: #ffffff;
-                margin: 0;
-                padding: 0;
-            }}
-            .container {{
-                max-width: 600px;
-                margin: 40px auto;
-                background-color: #1F1F1F;
-                border-radius: 8px;
-                padding: 40px;
-            }}
-            .logo {{
-                text-align: center;
-                margin-bottom: 30px;
-            }}
-            .logo h1 {{
-                color: #F5C518;
-                font-size: 32px;
-                margin: 0;
-            }}
-            .content {{
-                line-height: 1.6;
-            }}
-            .success {{
-                background-color: #5CB85C;
-                color: #ffffff;
-                padding: 12px;
-                border-radius: 4px;
-                margin: 20px 0;
-            }}
-            .footer {{
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #333;
-                font-size: 12px;
-                color: #999;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="logo">
-                <h1>PodDB Pro</h1>
-            </div>
-            <div class="content">
-                <h2>Password Changed Successfully</h2>
-                <p>Hi {username},</p>
-                <div class="success">
-                    Your password has been changed successfully.
-                </div>
-                <p>If you didn't make this change, please contact our support team immediately.</p>
-            </div>
-            <div class="footer">
-                <p>&copy; 2025 PodDB Pro. All rights reserved.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-def generate_account_banned_email_html(username: str, reason: str) -> str:
-    """Generate HTML for account banned notification"""
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                background-color: #000000;
-                color: #ffffff;
-                margin: 0;
-                padding: 0;
-            }}
-            .container {{
-                max-width: 600px;
-                margin: 40px auto;
-                background-color: #1F1F1F;
-                border-radius: 8px;
-                padding: 40px;
-            }}
-            .logo {{
-                text-align: center;
-                margin-bottom: 30px;
-            }}
-            .logo h1 {{
-                color: #F5C518;
-                font-size: 32px;
-                margin: 0;
-            }}
-            .content {{
-                line-height: 1.6;
-            }}
-            .danger {{
-                background-color: #D9534F;
-                color: #ffffff;
-                padding: 12px;
-                border-radius: 4px;
-                margin: 20px 0;
-            }}
-            .footer {{
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #333;
-                font-size: 12px;
-                color: #999;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="logo">
-                <h1>PodDB Pro</h1>
-            </div>
-            <div class="content">
-                <h2>Account Suspended</h2>
-                <p>Hi {username},</p>
-                <div class="danger">
-                    Your account has been suspended.
-                </div>
-                <p><strong>Reason:</strong> {reason}</p>
-                <p>If you believe this is a mistake, please contact our support team.</p>
-            </div>
-            <div class="footer">
-                <p>&copy; 2025 PodDB Pro. All rights reserved.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-def send_verification_email(email: str, username: str, token: str) -> int:
-    """Queue verification email"""
-    verification_link = f"{FRONTEND_URL}/auth/verify-email?token={token}"
-    subject = "Verify your PodDB Pro account"
-    body = generate_verification_email_html(username, verification_link)
+class EmailService:
+    def __init__(self):
+        self.config = self._load_config()
     
-    return queue_email(email, subject, body)
-
-def send_password_reset_email(email: str, username: str, token: str) -> int:
-    """Queue password reset email"""
-    reset_link = f"{FRONTEND_URL}/auth/reset-password?token={token}"
-    subject = "Reset your PodDB Pro password"
-    body = generate_password_reset_email_html(username, reset_link)
+    def _load_config(self):
+        """Load SMTP configuration from database"""
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT config_key, config_value FROM sync_config WHERE config_key LIKE 'smtp_%' OR config_key IN ('admin_email', 'enable_email_notifications')")
+            rows = cursor.fetchall()
+            conn.close()
+            
+            config = {row[0]: row[1] for row in rows}
+            return config
+        except Exception as e:
+            logger.error(f"Failed to load email config: {e}")
+            return {}
     
-    return queue_email(email, subject, body)
-
-def send_password_changed_email(email: str, username: str) -> int:
-    """Queue password changed notification email"""
-    subject = "Your PodDB Pro password was changed"
-    body = generate_password_changed_email_html(username)
+    def reload_config(self):
+        """Reload configuration from database"""
+        self.config = self._load_config()
     
-    return queue_email(email, subject, body)
-
-def send_account_banned_email(email: str, username: str, reason: str) -> int:
-    """Queue account banned notification email"""
-    subject = "Your PodDB Pro account has been suspended"
-    body = generate_account_banned_email_html(username, reason)
+    def is_enabled(self) -> bool:
+        """Check if email notifications are enabled"""
+        return self.config.get('enable_email_notifications', 'false').lower() == 'true'
     
-    return queue_email(email, subject, body)
-
-def send_email_change_verification(email: str, username: str, token: str) -> int:
-    """Queue email change verification"""
-    verification_link = f"{FRONTEND_URL}/auth/verify-email?token={token}"
-    subject = "Verify your new email address"
-    body = generate_verification_email_html(username, verification_link)
+    def test_connection(self) -> dict:
+        """Test SMTP connection"""
+        if not self.is_enabled():
+            return {"success": False, "message": "Email notifications are disabled"}
+        
+        try:
+            smtp_host = self.config.get('smtp_host', '')
+            smtp_port = int(self.config.get('smtp_port', '587'))
+            smtp_username = self.config.get('smtp_username', '')
+            smtp_password = self.config.get('smtp_password', '')
+            use_tls = self.config.get('smtp_use_tls', 'true').lower() == 'true'
+            
+            if not smtp_host or not smtp_username or not smtp_password:
+                return {"success": False, "message": "SMTP configuration is incomplete"}
+            
+            # Create SMTP connection
+            if use_tls:
+                server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+                server.starttls()
+            else:
+                server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10)
+            
+            server.login(smtp_username, smtp_password)
+            server.quit()
+            
+            return {"success": True, "message": "SMTP connection successful"}
+        except Exception as e:
+            logger.error(f"SMTP connection test failed: {e}")
+            return {"success": False, "message": str(e)}
     
-    return queue_email(email, subject, body)
-
-
-# ============================================
-# ADMIN NOTIFICATION EMAILS
-# ============================================
-
-def generate_contribution_approved_email_html(username: str, podcast_title: str, podcast_url: str) -> str:
-    """Generate HTML for contribution approved email"""
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                background-color: #000000;
-                color: #ffffff;
-                margin: 0;
-                padding: 0;
-            }}
-            .container {{
-                max-width: 600px;
-                margin: 40px auto;
-                background-color: #1F1F1F;
-                border-radius: 8px;
-                padding: 40px;
-            }}
-            .logo {{
-                text-align: center;
-                margin-bottom: 30px;
-            }}
-            .logo h1 {{
-                color: #F5C518;
-                font-size: 32px;
-                margin: 0;
-            }}
-            .content {{
-                line-height: 1.6;
-            }}
-            .success {{
-                background-color: #5CB85C;
-                color: #ffffff;
-                padding: 16px;
-                border-radius: 4px;
-                margin: 20px 0;
-                text-align: center;
-                font-size: 18px;
-                font-weight: bold;
-            }}
-            .button {{
-                display: inline-block;
-                background-color: #5799EF;
-                color: #ffffff;
-                padding: 14px 30px;
-                text-decoration: none;
-                border-radius: 4px;
-                margin: 20px 0;
-                font-weight: bold;
-            }}
-            .footer {{
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #333;
-                font-size: 12px;
-                color: #999;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="logo">
-                <h1>PodDB Pro</h1>
-            </div>
-            <div class="content">
-                <h2>🎉 Contribution Approved!</h2>
-                <p>Hi {username},</p>
-                <div class="success">
-                    Your podcast "{podcast_title}" has been approved!
-                </div>
-                <p>Your contribution is now live on PodDB Pro and visible to all users.</p>
-                <p style="text-align: center;">
-                    <a href="{podcast_url}" class="button">View Your Podcast</a>
-                </p>
-                <p>Thank you for contributing to PodDB Pro and helping us grow our podcast database!</p>
-            </div>
-            <div class="footer">
-                <p>&copy; 2025 PodDB Pro. All rights reserved.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-def generate_contribution_rejected_email_html(username: str, podcast_title: str, rejection_reason: str, suggestions: str = '') -> str:
-    """Generate HTML for contribution rejected email"""
-    suggestions_html = f"""
-                <h3>Suggestions for Resubmission:</h3>
-                <div style="background-color: #252525; padding: 12px; border-radius: 4px; margin: 15px 0;">
-                    {suggestions}
-                </div>
-    """ if suggestions else ''
+    def send_email(self, to_email: str, subject: str, body: str, is_html: bool = False) -> bool:
+        """Send email via SMTP"""
+        if not self.is_enabled():
+            logger.info("Email notifications are disabled, skipping email send")
+            return False
+        
+        try:
+            smtp_host = self.config.get('smtp_host', '')
+            smtp_port = int(self.config.get('smtp_port', '587'))
+            smtp_username = self.config.get('smtp_username', '')
+            smtp_password = self.config.get('smtp_password', '')
+            from_email = self.config.get('smtp_from_email', smtp_username)
+            from_name = self.config.get('smtp_from_name', 'PodDB Pro')
+            use_tls = self.config.get('smtp_use_tls', 'true').lower() == 'true'
+            
+            if not smtp_host or not smtp_username or not smtp_password:
+                logger.error("SMTP configuration is incomplete")
+                return False
+            
+            # Create message
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = f"{from_name} <{from_email}>"
+            msg['To'] = to_email
+            
+            # Add body
+            if is_html:
+                msg.attach(MIMEText(body, 'html'))
+            else:
+                msg.attach(MIMEText(body, 'plain'))
+            
+            # Send email
+            if use_tls:
+                server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+                server.starttls()
+            else:
+                server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10)
+            
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+            server.quit()
+            
+            logger.info(f"Email sent successfully to {to_email}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send email: {e}")
+            return False
     
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                background-color: #000000;
-                color: #ffffff;
-                margin: 0;
-                padding: 0;
-            }}
-            .container {{
-                max-width: 600px;
-                margin: 40px auto;
-                background-color: #1F1F1F;
-                border-radius: 8px;
-                padding: 40px;
-            }}
-            .logo {{
-                text-align: center;
-                margin-bottom: 30px;
-            }}
-            .logo h1 {{
-                color: #F5C518;
-                font-size: 32px;
-                margin: 0;
-            }}
-            .content {{
-                line-height: 1.6;
-            }}
-            .warning {{
-                background-color: #D9534F;
-                color: #ffffff;
-                padding: 16px;
-                border-radius: 4px;
-                margin: 20px 0;
-            }}
-            .button {{
-                display: inline-block;
-                background-color: #5799EF;
-                color: #ffffff;
-                padding: 14px 30px;
-                text-decoration: none;
-                border-radius: 4px;
-                margin: 20px 0;
-                font-weight: bold;
-            }}
-            .footer {{
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #333;
-                font-size: 12px;
-                color: #999;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="logo">
-                <h1>PodDB Pro</h1>
-            </div>
-            <div class="content">
-                <h2>Action Required: Podcast Submission</h2>
-                <p>Hi {username},</p>
-                <p>Thank you for submitting "{podcast_title}" to PodDB Pro.</p>
-                <div class="warning">
-                    <h3 style="margin-top: 0;">Submission Not Approved</h3>
-                    <p style="margin-bottom: 0;">{rejection_reason}</p>
-                </div>
-                {suggestions_html}
-                <p>You can resubmit your podcast after making the necessary changes.</p>
-                <p style="text-align: center;">
-                    <a href="{FRONTEND_URL}/contribute" class="button">Resubmit Podcast</a>
-                </p>
-                <p>If you have any questions, please don't hesitate to contact our support team.</p>
-            </div>
-            <div class="footer">
-                <p>&copy; 2025 PodDB Pro. All rights reserved.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-def send_contribution_approved_email(email: str, username: str, podcast_title: str, podcast_id: int) -> int:
-    """Queue contribution approved email"""
-    podcast_url = f"{FRONTEND_URL}/podcast/{podcast_id}"
-    subject = f"🎉 Your Podcast '{podcast_title}' Has Been Approved!"
-    body = generate_contribution_approved_email_html(username, podcast_title, podcast_url)
+    def send_admin_notification(self, subject: str, body: str, is_html: bool = False) -> bool:
+        """Send notification to admin email"""
+        admin_email = self.config.get('admin_email', '')
+        if not admin_email:
+            logger.warning("Admin email not configured")
+            return False
+        
+        return self.send_email(admin_email, subject, body, is_html)
     
-    return queue_email(email, subject, body)
+    def send_new_episodes_notification(self, podcast_title: str, episode_count: int, episode_titles: list) -> bool:
+        """Send notification about new episodes"""
+        subject = f"🎙️ New Episodes Added: {podcast_title}"
+        
+        body = f"""
+New episodes have been automatically added to PodDB Pro!
 
-def send_contribution_rejected_email(email: str, username: str, podcast_title: str, rejection_reason: str, suggestions: str = '') -> int:
-    """Queue contribution rejected email"""
-    subject = f"Action Required: Your Podcast Submission '{podcast_title}'"
-    body = generate_contribution_rejected_email_html(username, podcast_title, rejection_reason, suggestions)
+Podcast: {podcast_title}
+New Episodes: {episode_count}
+
+Episodes Added:
+"""
+        for i, title in enumerate(episode_titles[:10], 1):  # Show max 10
+            body += f"{i}. {title}\n"
+        
+        if episode_count > 10:
+            body += f"\n... and {episode_count - 10} more episodes"
+        
+        body += "\n\n---\nPodDB Pro - Automated Sync System"
+        
+        return self.send_admin_notification(subject, body)
     
-    return queue_email(email, subject, body)
+    def send_sync_error_notification(self, error_count: int, error_details: str) -> bool:
+        """Send notification about sync errors"""
+        subject = f"⚠️ Sync Errors Detected ({error_count} errors)"
+        
+        body = f"""
+The automated sync system encountered errors:
 
-def send_content_updated_email(email: str, username: str, content_type: str, content_title: str) -> int:
-    """Queue content updated notification email"""
-    subject = f"Admin Updated Your {content_type}: '{content_title}'"
-    body = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                background-color: #000000;
-                color: #ffffff;
-                margin: 0;
-                padding: 0;
-            }}
-            .container {{
-                max-width: 600px;
-                margin: 40px auto;
-                background-color: #1F1F1F;
-                border-radius: 8px;
-                padding: 40px;
-            }}
-            .logo {{
-                text-align: center;
-                margin-bottom: 30px;
-            }}
-            .logo h1 {{
-                color: #F5C518;
-                font-size: 32px;
-                margin: 0;
-            }}
-            .content {{
-                line-height: 1.6;
-            }}
-            .info {{
-                background-color: #5799EF;
-                color: #ffffff;
-                padding: 12px;
-                border-radius: 4px;
-                margin: 20px 0;
-            }}
-            .footer {{
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #333;
-                font-size: 12px;
-                color: #999;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="logo">
-                <h1>PodDB Pro</h1>
-            </div>
-            <div class="content">
-                <h2>Content Updated</h2>
-                <p>Hi {username},</p>
-                <div class="info">
-                    An administrator has made updates to your {content_type} "{content_title}".
-                </div>
-                <p>You can view the updated content on PodDB Pro.</p>
-            </div>
-            <div class="footer">
-                <p>&copy; 2025 PodDB Pro. All rights reserved.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+Total Errors: {error_count}
+
+Error Details:
+{error_details}
+
+Please check the admin dashboard for more information:
+/admin/sync
+
+---
+PodDB Pro - Automated Sync System
+"""
+        
+        return self.send_admin_notification(subject, body)
     
-    return queue_email(email, subject, body)
+    def send_api_quota_warning(self, quota_used: int, quota_limit: int) -> bool:
+        """Send warning about API quota usage"""
+        percentage = (quota_used / quota_limit) * 100
+        subject = f"⚠️ YouTube API Quota Warning ({percentage:.1f}% used)"
+        
+        body = f"""
+YouTube API quota usage is approaching the daily limit:
 
+Quota Used: {quota_used:,} / {quota_limit:,} ({percentage:.1f}%)
+
+The sync system will automatically pause if quota reaches 90% to prevent service disruption.
+
+---
+PodDB Pro - Automated Sync System
+"""
+        
+        return self.send_admin_notification(subject, body)
+
+
+# Singleton instance
+email_service = EmailService()
