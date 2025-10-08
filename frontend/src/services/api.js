@@ -159,6 +159,16 @@ export const searchLocations = async (query = '', limit = 10) => {
   return response.data;
 };
 
+export const addNewLocation = async (location, state = '', country = '') => {
+  const params = new URLSearchParams();
+  params.append('location', location);
+  if (state) params.append('state', state);
+  if (country) params.append('country', country);
+  
+  const response = await api.post(`/search/locations/add?${params.toString()}`);
+  return response.data;
+};
+
 export const searchPeople = async (query = '', limit = 10) => {
   const response = await api.get(`/search/people?q=${query}&limit=${limit}`);
   return response.data;
