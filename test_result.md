@@ -308,7 +308,10 @@ test_plan:
     - "API endpoints for smart search"
     - "API endpoints for people/team management"
     - "API endpoints for episode management"
-  stuck_tasks: []
+  stuck_tasks: 
+    - "YouTube API service integration"
+    - "API endpoints for YouTube integration"
+    - "API endpoints for episode management"
   test_all: false
   test_priority: "high_first"
 
