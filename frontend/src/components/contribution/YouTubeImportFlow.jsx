@@ -42,10 +42,25 @@ const YouTubeImportFlow = () => {
     setStep('fetching');
 
     try {
-      const data = await fetchYouTubePlaylist(playlistUrl);
-      setFetchedData(data);
+      // Fetch first 10 episodes only
+      const data = await fetchYouTubePlaylistInitial(playlistUrl);
+      
+      setFetchedData({
+        playlist: data.playlist,
+        episodes: data.episodes
+      });
+      
+      setAllEpisodes(data.episodes);
+      setLoadedEpisodes(data.episodes.length);
+      setTotalEpisodes(data.total_episodes || data.episodes.length);
+      
       setStep('form');
-      toast.success(`Fetched ${data.episodes.length} episodes from playlist`);
+      toast.success(`Loaded first ${data.episodes.length} episodes. Form is ready!`);
+      
+      // Start background fetching if there are more episodes
+      if (data.total_episodes && data.total_episodes > data.episodes.length) {
+        startBackgroundFetch(playlistUrl, data.episodes.length, data.total_episodes);
+      }
     } catch (err) {
       console.error('Fetch error:', err);
       setError(
@@ -55,6 +70,58 @@ const YouTubeImportFlow = () => {
       setStep('input');
     }
   };
+  
+  const startBackgroundFetch = async (url, startFrom, total) => {
+    setIsBackgroundFetching(true);
+    let currentIndex = startFrom;
+    const batchSize = 20;
+    
+    backgroundFetchRef.current = async () => {
+      try {
+        while (currentIndex < total) {
+          const data = await fetchYouTubePlaylistBatch(url, currentIndex, batchSize);
+          
+          if (data.episodes && data.episodes.length > 0) {
+            setAllEpisodes(prev => [...prev, ...data.episodes]);
+            setLoadedEpisodes(prev => prev + data.episodes.length);
+            currentIndex += data.episodes.length;
+            
+            // Update the form data with new episodes
+            setFetchedData(prev => ({
+              ...prev,
+              episodes: [...prev.episodes, ...data.episodes]
+            }));
+            
+            console.log(`Background fetch: Loaded ${currentIndex}/${total} episodes`);
+          } else {
+            break;
+          }
+          
+          // Small delay to avoid overwhelming the API
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        setIsBackgroundFetching(false);
+        toast.success(`All ${currentIndex} episodes loaded successfully!`);
+      } catch (err) {
+        console.error('Background fetch error:', err);
+        setIsBackgroundFetching(false);
+        toast.error('Background fetching stopped. You can continue with loaded episodes.');
+      }
+    };
+    
+    // Start the background fetch
+    backgroundFetchRef.current();
+  };
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (backgroundFetchRef.current) {
+        backgroundFetchRef.current = null;
+      }
+    };
+  }, []);
 
   // Step 1: URL Input
   if (step === 'input') {
