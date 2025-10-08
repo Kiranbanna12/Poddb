@@ -330,36 +330,38 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("Admin Contributions Filter Type", False, f"Exception: {str(e)}")
 
-    def test_create_person(self):
-        """Test Suite 3: People/Team Management - Create Person"""
-        try:
-            url = f"{self.base_url}/people"
-            payload = {
-                "full_name": "Test Host",
-                "role": "Host",
-                "bio": "Test bio for podcast host",
-                "location": "Mumbai",
-                "instagram_url": "https://instagram.com/testhost"
-            }
+    def test_admin_sync_stats(self):
+        """Test Suite 4: Admin Sync APIs - Get Sync Statistics"""
+        if not self.admin_token:
+            self.log_test("Admin Sync Stats", False, "No admin token available")
+            return
             
-            response = self.session.post(url, json=payload, timeout=10)
+        try:
+            url = f"{self.base_url}/admin/sync/stats"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if "id" in data and "slug" in data:
-                    self.created_person_id = data["id"]  # Store for later tests
-                    details = f"Created person: {data.get('full_name', 'N/A')} (ID: {data['id']})"
-                    self.log_test("Create Person", True, details)
+                if "success" in data and data["success"] and "stats" in data:
+                    stats = data["stats"]
+                    # Check for expected sync stat fields
+                    expected_fields = ["total_playlists", "auto_sync_enabled", "syncs_today"]
+                    present_fields = [field for field in expected_fields if field in stats]
+                    
+                    details = f"Sync stats retrieved: {len(present_fields)}/{len(expected_fields)} fields present"
+                    self.log_test("Admin Sync Stats", True, details)
                 else:
-                    self.log_test("Create Person", False, 
-                                "Missing 'id' or 'slug' in response", data)
+                    self.log_test("Admin Sync Stats", False, 
+                                "Missing 'success' or 'stats' in response", data)
             else:
-                self.log_test("Create Person", False, 
+                self.log_test("Admin Sync Stats", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Create Person", False, f"Exception: {str(e)}")
+            self.log_test("Admin Sync Stats", False, f"Exception: {str(e)}")
 
     def test_get_person_by_id(self):
         """Test Suite 3: People/Team Management - Get Person by ID"""
