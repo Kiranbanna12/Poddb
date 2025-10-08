@@ -1458,10 +1458,11 @@ class ContributionTester:
     def test_admin_login_for_sync(self):
         """Login admin user for sync testing"""
         try:
+            # Use the existing admin credentials from test_result.md
             url = f"{self.base_url}/auth/login"
             payload = {
-                "identifier": "syncadmin@poddb.com",
-                "password": "AdminSync123!"
+                "identifier": "kiranbanna12@gmail.com",
+                "password": "Admin1234!@#"
             }
             
             response = self.session.post(url, json=payload, timeout=10)
