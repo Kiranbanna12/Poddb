@@ -177,7 +177,7 @@ const EpisodeManagementSection = ({ episodes, onEpisodesChange, mode }) => {
         </div>
       ) : (
         <div className="space-y-3">
-          {episodes.map((episode, index) => (
+          {episodes.slice(0, displayCount).map((episode, index) => (
             <div
               key={episode.id}
               className="bg-[#2A2A2A] rounded-lg p-4 flex items-start gap-4 hover:bg-[#333333] transition-colors"
