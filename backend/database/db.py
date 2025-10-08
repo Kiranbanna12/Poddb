@@ -530,6 +530,33 @@ def seed_data():
         )
         print("✓ Languages seeded")
     
+    # Check if sync_config already exists
+    cursor.execute("SELECT COUNT(*) FROM sync_config")
+    if cursor.fetchone()[0] == 0:
+        # Insert default sync configuration
+        sync_configs = [
+            ('sync_enabled', 'false', 'boolean', 'Master on/off switch for sync system'),
+            ('sync_schedule_hour', '2', 'number', 'Hour of day to run daily sync (0-23)'),
+            ('sync_batch_size', '50', 'number', 'Number of podcasts to process per batch'),
+            ('max_concurrent_requests', '5', 'number', 'Maximum parallel API calls'),
+            ('new_episode_check_enabled', 'true', 'boolean', 'Enable automatic new episode detection'),
+            ('retry_failed_after_hours', '6', 'number', 'Hours to wait before retrying failed items'),
+            ('smtp_host', '', 'string', 'SMTP server hostname'),
+            ('smtp_port', '587', 'number', 'SMTP server port'),
+            ('smtp_username', '', 'string', 'SMTP username'),
+            ('smtp_password', '', 'string', 'SMTP password (encrypted)'),
+            ('smtp_from_email', '', 'string', 'From email address'),
+            ('smtp_from_name', 'PodDB Pro', 'string', 'From name for emails'),
+            ('smtp_use_tls', 'true', 'boolean', 'Use TLS for SMTP'),
+            ('admin_email', '', 'string', 'Admin email for notifications'),
+            ('enable_email_notifications', 'false', 'boolean', 'Send email notifications')
+        ]
+        cursor.executemany(
+            'INSERT INTO sync_config (config_key, config_value, config_type, description) VALUES (?, ?, ?, ?)',
+            sync_configs
+        )
+        print("✓ Sync configuration seeded")
+    
     conn.commit()
     conn.close()
 
