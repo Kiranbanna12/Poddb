@@ -5,6 +5,8 @@ from typing import Optional, List
 
 class YouTubePlaylistRequest(BaseModel):
     playlist_url: str
+    max_results: Optional[int] = None  # None = fetch all
+    start_index: Optional[int] = 0  # For pagination
 
 
 class YouTubeVideoRequest(BaseModel):
