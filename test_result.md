@@ -116,6 +116,27 @@ user_problem_statement: |
   - Daily auto-sync for playlists
 
 backend:
+  - task: "Authentication - Sign in/Login fix"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py, /app/backend/database/queries.py, /app/backend/models/user.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Fixed sign-in/login issues:
+          1. Updated UserLogin model to accept 'identifier' field (email or username)
+          2. Added get_user_by_username() and get_user_by_identifier() functions in queries.py
+          3. Updated login endpoint to use identifier instead of just email
+          4. Modified login response to include 'success' field and proper token
+          5. Updated frontend AuthContext to use JWT token with localStorage
+          6. Added axios interceptor to include Authorization header in all requests
+          7. Fixed checkAuth to properly validate token
+          8. Installed missing httplib2 and uritemplate dependencies
+
   - task: "Database schema updates"
     implemented: true
     working: true
