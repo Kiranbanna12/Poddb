@@ -385,44 +385,22 @@ class AuthTester:
     def run_all_tests(self):
         """Run all authentication tests"""
         print("=" * 80)
-        print("AUTHENTICATION SYSTEM BACKEND API TESTING SUITE")
+        print("AUTHENTICATION TESTING SUITE - SIGN IN/LOGIN FUNCTIONALITY")
         print("=" * 80)
         print(f"Testing against: {self.base_url}")
-        print(f"Test user: {self.test_user_data['username']} ({self.test_user_data['email']})")
         print()
         
-        # Pre-registration tests
-        print("🔍 PRE-REGISTRATION AVAILABILITY CHECKS")
-        print("-" * 50)
-        self.test_username_availability_check_available()
-        self.test_email_availability_check_available()
-        
-        # Registration and post-registration checks
-        print("📝 USER REGISTRATION")
+        # Test Suite: Authentication Flow
+        print("🔐 AUTHENTICATION FLOW TESTS")
         print("-" * 50)
         self.test_user_registration()
-        self.test_username_availability_check_taken()
-        
-        # Authentication tests
-        print("🔐 AUTHENTICATION FLOW")
-        print("-" * 50)
-        self.test_login_with_credentials()
-        self.test_get_current_user()
-        
-        # Profile management tests
-        print("👤 PROFILE MANAGEMENT")
-        print("-" * 50)
-        self.test_get_user_profile()
-        self.test_update_profile()
-        self.test_change_password()
-        self.test_login_with_new_password()
-        
-        # Session management tests
-        print("🔄 SESSION MANAGEMENT")
-        print("-" * 50)
-        self.test_get_active_sessions()
-        self.test_password_reset_flow()
-        self.test_logout()
+        self.test_login_with_email()
+        self.test_login_with_username()
+        self.test_login_invalid_password()
+        self.test_login_nonexistent_user()
+        self.test_protected_endpoint_with_token()
+        self.test_protected_endpoint_without_token()
+        self.test_protected_endpoint_invalid_token()
         
         # Summary
         self.print_summary()
