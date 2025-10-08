@@ -88,43 +88,48 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("User Registration", False, f"Exception: {str(e)}")
 
-    def test_youtube_fetch_video(self):
-        """Test Suite 1: YouTube API Integration - Fetch Single Video"""
+    def test_user_login(self):
+        """Test Suite 1: Authentication Flow - User Login"""
         try:
-            url = f"{self.base_url}/youtube/fetch-video"
+            url = f"{self.base_url}/auth/login"
             payload = {
-                "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                "identifier": "testuser2024@example.com",
+                "password": "TestPass123!"
             }
             
-            response = self.session.post(url, json=payload, timeout=30)
+            response = self.session.post(url, json=payload, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
                 # Check required fields
-                required_fields = ["title", "description", "duration", "thumbnail"]
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if missing_fields:
-                    self.log_test("YouTube Fetch Video", False, 
-                                f"Missing fields: {missing_fields}", data)
-                    return
-                
-                # Check for Cloudinary URL
-                cloudinary_present = "thumbnail_cloudinary" in data
-                details = f"Title: {data.get('title', 'N/A')[:50]}..."
-                if cloudinary_present:
-                    details += ", Cloudinary URL present"
+                if "success" in data and data["success"] and "token" in data and "user" in data:
+                    user = data["user"]
+                    token = data["token"]
+                    
+                    # Verify JWT token structure
+                    try:
+                        import jwt
+                        decoded = jwt.decode(token, options={"verify_signature": False})
+                        if "user_id" in decoded and "email" in decoded and "role" in decoded:
+                            self.regular_user_token = token
+                            self.test_user_id = user.get("id")
+                            details = f"Login successful: {user.get('username')}, Role: {decoded.get('role')}"
+                            self.log_test("User Login", True, details)
+                        else:
+                            self.log_test("User Login", False, 
+                                        "JWT token missing required fields", decoded)
+                    except Exception as jwt_error:
+                        self.log_test("User Login", False, f"JWT decode error: {jwt_error}")
                 else:
-                    details += ", Cloudinary URL missing"
-                
-                self.log_test("YouTube Fetch Video", True, details)
+                    self.log_test("User Login", False, 
+                                "Missing required fields in response", data)
             else:
-                self.log_test("YouTube Fetch Video", False, 
+                self.log_test("User Login", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("YouTube Fetch Video", False, f"Exception: {str(e)}")
+            self.log_test("User Login", False, f"Exception: {str(e)}")
 
     def test_search_categories(self):
         """Test Suite 2: Smart Search - Categories"""
