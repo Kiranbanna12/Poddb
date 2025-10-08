@@ -439,6 +439,224 @@ class BackendTester:
         except Exception as e:
             self.log_test("Episode Import Preview", False, f"Exception: {str(e)}")
 
+    def test_add_new_location(self):
+        """Test Suite 5: Contribution Form Fixes - Add New Location"""
+        try:
+            url = f"{self.base_url}/search/locations/add"
+            params = {
+                "location": "Mumbai",
+                "state": "Maharashtra", 
+                "country": "India"
+            }
+            
+            response = self.session.post(url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check required fields in response
+                required_fields = ["location", "name"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    self.log_test("Add New Location", False, 
+                                f"Missing fields: {missing_fields}", data)
+                    return
+                
+                # Verify formatted name
+                expected_name = "Mumbai, Maharashtra, India"
+                if data.get("name") == expected_name:
+                    details = f"Location created: {data['name']}"
+                    self.log_test("Add New Location", True, details)
+                else:
+                    details = f"Name format incorrect. Expected: {expected_name}, Got: {data.get('name')}"
+                    self.log_test("Add New Location", False, details, data)
+            else:
+                self.log_test("Add New Location", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Add New Location", False, f"Exception: {str(e)}")
+
+    def test_add_new_location_minimal(self):
+        """Test Suite 5: Contribution Form Fixes - Add New Location (Minimal Data)"""
+        try:
+            url = f"{self.base_url}/search/locations/add"
+            params = {
+                "location": "Delhi"
+                # No state or country
+            }
+            
+            response = self.session.post(url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "location" in data and "name" in data:
+                    # Should just be "Delhi" without commas
+                    expected_name = "Delhi"
+                    if data.get("name") == expected_name:
+                        details = f"Minimal location created: {data['name']}"
+                        self.log_test("Add New Location (Minimal)", True, details)
+                    else:
+                        details = f"Name format incorrect. Expected: {expected_name}, Got: {data.get('name')}"
+                        self.log_test("Add New Location (Minimal)", False, details, data)
+                else:
+                    self.log_test("Add New Location (Minimal)", False, 
+                                "Missing required fields", data)
+            else:
+                self.log_test("Add New Location (Minimal)", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Add New Location (Minimal)", False, f"Exception: {str(e)}")
+
+    def test_user_registration_and_login(self):
+        """Test Suite 5: Contribution Form Fixes - User Registration and Login"""
+        try:
+            # First register a test user
+            register_url = f"{self.base_url}/auth/register"
+            register_payload = {
+                "username": "testcontributor",
+                "email": "testcontributor@example.com",
+                "password": "testpass123"
+            }
+            
+            register_response = self.session.post(register_url, json=register_payload, timeout=10)
+            
+            if register_response.status_code == 200:
+                register_data = register_response.json()
+                
+                if "token" in register_data and "user" in register_data:
+                    # Store token for contribution test
+                    self.auth_token = register_data["token"]
+                    details = f"User registered: {register_data['user'].get('username', 'N/A')}"
+                    self.log_test("User Registration", True, details)
+                    
+                    # Now test login
+                    login_url = f"{self.base_url}/auth/login"
+                    login_payload = {
+                        "identifier": "testcontributor@example.com",
+                        "password": "testpass123"
+                    }
+                    
+                    login_response = self.session.post(login_url, json=login_payload, timeout=10)
+                    
+                    if login_response.status_code == 200:
+                        login_data = login_response.json()
+                        
+                        if "token" in login_data and "success" in login_data and login_data["success"]:
+                            # Update token from login
+                            self.auth_token = login_data["token"]
+                            details = f"Login successful for: {login_data.get('user', {}).get('username', 'N/A')}"
+                            self.log_test("User Login", True, details)
+                        else:
+                            self.log_test("User Login", False, 
+                                        "Missing token or success=false in login response", login_data)
+                    else:
+                        self.log_test("User Login", False, 
+                                    f"Login HTTP {login_response.status_code}: {login_response.text}")
+                else:
+                    self.log_test("User Registration", False, 
+                                "Missing token or user in registration response", register_data)
+            elif register_response.status_code == 400:
+                # User might already exist, try login directly
+                self.log_test("User Registration", True, "User already exists (acceptable)")
+                
+                # Try login
+                login_url = f"{self.base_url}/auth/login"
+                login_payload = {
+                    "identifier": "testcontributor@example.com",
+                    "password": "testpass123"
+                }
+                
+                login_response = self.session.post(login_url, json=login_payload, timeout=10)
+                
+                if login_response.status_code == 200:
+                    login_data = login_response.json()
+                    if "token" in login_data:
+                        self.auth_token = login_data["token"]
+                        self.log_test("User Login", True, "Login successful with existing user")
+                    else:
+                        self.log_test("User Login", False, "Missing token in login response", login_data)
+                else:
+                    self.log_test("User Login", False, 
+                                f"Login HTTP {login_response.status_code}: {login_response.text}")
+            else:
+                self.log_test("User Registration", False, 
+                            f"Registration HTTP {register_response.status_code}: {register_response.text}")
+                
+        except Exception as e:
+            self.log_test("User Registration and Login", False, f"Exception: {str(e)}")
+
+    def test_contribution_submission_with_auth(self):
+        """Test Suite 5: Contribution Form Fixes - Contribution Submission with Authentication"""
+        if not hasattr(self, 'auth_token') or not self.auth_token:
+            self.log_test("Contribution Submission with Auth", False, 
+                        "No auth token available (registration/login failed)")
+            return
+            
+        try:
+            url = f"{self.base_url}/contributions"
+            payload = {
+                "podcast_name": "Test Podcast for Contribution",
+                "description": "This is a test podcast submission",
+                "category": "Technology",
+                "language": "English",
+                "location": "Mumbai, Maharashtra, India",
+                "host_name": "Test Host Name",
+                "website_url": "https://testpodcast.com",
+                "rss_feed_url": "https://testpodcast.com/feed.xml"
+            }
+            
+            # Add Authorization header manually
+            headers = {
+                "Authorization": f"Bearer {self.auth_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = self.session.post(url, json=payload, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "id" in data:
+                    details = f"Contribution created with ID: {data['id']}"
+                    self.log_test("Contribution Submission with Auth", True, details)
+                else:
+                    self.log_test("Contribution Submission with Auth", False, 
+                                "Missing 'id' in response", data)
+            else:
+                self.log_test("Contribution Submission with Auth", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Contribution Submission with Auth", False, f"Exception: {str(e)}")
+
+    def test_contribution_submission_without_auth(self):
+        """Test Suite 5: Contribution Form Fixes - Contribution Submission without Authentication"""
+        try:
+            url = f"{self.base_url}/contributions"
+            payload = {
+                "podcast_name": "Test Podcast Unauthorized",
+                "description": "This should fail without auth",
+                "category": "Technology",
+                "language": "English"
+            }
+            
+            # Don't include Authorization header
+            response = self.session.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 401:
+                self.log_test("Contribution Submission without Auth", True, 
+                            "Correctly returned 401 Unauthorized")
+            else:
+                self.log_test("Contribution Submission without Auth", False, 
+                            f"Expected 401, got HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Contribution Submission without Auth", False, f"Exception: {str(e)}")
+
     def run_all_tests(self):
         """Run all test suites"""
         print("=" * 80)
