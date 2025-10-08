@@ -375,8 +375,8 @@ def create_contribution(user_id: int, data: dict) -> dict:
     data_json = json.dumps(data)
     
     cursor.execute('''
-        INSERT INTO contributions (user_id, type, status, data, created_at)
-        VALUES (?, 'new', 'pending', ?, ?)
+        INSERT INTO contributions (user_id, contribution_type, status, submitted_data, created_at)
+        VALUES (?, 'new_podcast', 'pending', ?, ?)
     ''', (user_id, data_json, now))
     
     contribution_id = cursor.lastrowid
