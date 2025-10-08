@@ -60,10 +60,39 @@ const Navbar = () => {
 
           {/* User Menu */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" size="sm" className="text-white hover:text-[#5799EF] hover:bg-[#1F1F1F]">
-              <User size={18} className="mr-2" />
-              Sign In
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <Link to="/profile">
+                  <Button variant="ghost" size="sm" className="text-white hover:text-[#5799EF] hover:bg-[#1F1F1F]">
+                    <User size={18} className="mr-2" />
+                    {user?.username || 'Profile'}
+                  </Button>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="text-white hover:text-[#D9534F] hover:bg-[#1F1F1F]"
+                >
+                  <LogOut size={18} className="mr-2" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link to="/auth/login">
+                  <Button variant="ghost" size="sm" className="text-white hover:text-[#5799EF] hover:bg-[#1F1F1F]">
+                    <User size={18} className="mr-2" />
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/auth/register">
+                  <Button size="sm" className="bg-[#5799EF] hover:bg-[#4080d0] text-white">
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
