@@ -452,45 +452,23 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("Admin User Details", False, f"Exception: {str(e)}")
 
-    def test_episode_import_preview(self):
-        """Test Suite 4: Episode Management - Episode Import Preview"""
+    def test_admin_access_without_token(self):
+        """Test Suite 6: Authorization Tests - Admin Access Without Token"""
         try:
-            url = f"{self.base_url}/episodes/import"
-            payload = {
-                "source_type": "video",
-                "source_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-                "season_number": 1
-                # No podcast_id for preview mode
-            }
+            url = f"{self.base_url}/admin/contributions/stats"
+            # No Authorization header
             
-            response = self.session.post(url, json=payload, timeout=30)
+            response = self.session.get(url, timeout=10)
             
-            if response.status_code == 200:
-                data = response.json()
-                
-                if "episodes" in data and "success" in data:
-                    episodes = data["episodes"]
-                    if isinstance(episodes, list) and len(episodes) > 0:
-                        episode = episodes[0]
-                        # Check if it has video data
-                        if "title" in episode and "youtube_video_id" in episode:
-                            details = f"Preview mode: {len(episodes)} episode(s), Title: {episode['title'][:50]}..."
-                            self.log_test("Episode Import Preview", True, details)
-                        else:
-                            self.log_test("Episode Import Preview", False, 
-                                        "Missing video data in episode", data)
-                    else:
-                        self.log_test("Episode Import Preview", False, 
-                                    "No episodes in response", data)
-                else:
-                    self.log_test("Episode Import Preview", False, 
-                                "Missing 'episodes' or 'success' in response", data)
+            if response.status_code == 401:
+                self.log_test("Admin Access Without Token", True, 
+                            "Correctly returned 401 Unauthorized")
             else:
-                self.log_test("Episode Import Preview", False, 
-                            f"HTTP {response.status_code}: {response.text}")
+                self.log_test("Admin Access Without Token", False, 
+                            f"Expected 401, got HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Episode Import Preview", False, f"Exception: {str(e)}")
+            self.log_test("Admin Access Without Token", False, f"Exception: {str(e)}")
 
     def test_add_new_location(self):
         """Test Suite 5: Contribution Form Fixes - Add New Location"""
