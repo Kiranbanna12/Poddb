@@ -260,14 +260,14 @@ async def register(user: UserCreate):
 async def login(credentials: UserLogin):
     """User login"""
     try:
-        # Get user by email
-        user = queries.get_user_by_email(credentials.email)
+        # Get user by email or username
+        user = queries.get_user_by_identifier(credentials.identifier)
         if not user:
-            raise HTTPException(status_code=401, detail="Invalid email or password")
+            raise HTTPException(status_code=401, detail="Invalid email/username or password")
         
         # Verify password
         if not verify_password(credentials.password, user['password_hash']):
-            raise HTTPException(status_code=401, detail="Invalid email or password")
+            raise HTTPException(status_code=401, detail="Invalid email/username or password")
         
         # Remove password_hash from response
         user.pop('password_hash', None)
@@ -276,8 +276,10 @@ async def login(credentials: UserLogin):
         token = create_access_token({"user_id": user['id'], "email": user['email']})
         
         return {
+            "success": True,
             "user": user,
-            "token": token
+            "token": token,
+            "message": "Login successful"
         }
     except HTTPException:
         raise
