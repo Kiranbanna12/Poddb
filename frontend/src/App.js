@@ -8,6 +8,8 @@ import RankingsPage from "./pages/RankingsPage";
 import ContributePageAdvanced from "./pages/ContributePageAdvanced";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import ContributionsPage from "./pages/admin/ContributionsPage";
 import { Toaster } from "./components/ui/sonner";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
