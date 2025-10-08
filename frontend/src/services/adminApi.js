@@ -286,12 +286,29 @@ export default {
   deletePerson,
   mergePeople,
   
-  // Sync Management
+  // Old Sync Management
   getSyncStats,
   getSyncedPlaylists,
   getSyncHistory,
   updateSyncSettings,
   deletePlaylistSync,
+  
+  // New Sync System
+  getSyncStatus,
+  getSyncDashboard,
+  runFullSync,
+  checkNewEpisodes,
+  syncSinglePodcast,
+  recalculateAnalytics,
+  getSyncJobs,
+  getSyncErrors,
+  resolveError,
+  getSyncConfig,
+  updateSyncConfig,
+  getApiUsage,
+  testEmail,
+  enableSync,
+  disableSync,
   
   // Activity Logs
   getActivityLogs,
