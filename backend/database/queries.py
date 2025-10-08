@@ -332,6 +332,27 @@ def get_user_by_email(email: str) -> Optional[dict]:
     conn.close()
     return dict(row) if row else None
 
+def get_user_by_username(username: str) -> Optional[dict]:
+    """Get user by username"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+    row = cursor.fetchone()
+    
+    conn.close()
+    return dict(row) if row else None
+
+def get_user_by_identifier(identifier: str) -> Optional[dict]:
+    """Get user by email or username"""
+    # Try email first
+    user = get_user_by_email(identifier)
+    if user:
+        return user
+    
+    # Try username if email didn't work
+    return get_user_by_username(identifier)
+
 def get_user_by_id(user_id: int) -> Optional[dict]:
     """Get user by ID"""
     conn = get_db_connection()
