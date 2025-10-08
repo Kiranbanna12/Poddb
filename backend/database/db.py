@@ -353,6 +353,88 @@ def init_database():
         )
     ''')
     
+    # Create daily_analytics table for daily metrics snapshots
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS daily_analytics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            podcast_id INTEGER,
+            episode_id INTEGER,
+            snapshot_date INTEGER NOT NULL,
+            total_views INTEGER DEFAULT 0,
+            total_likes INTEGER DEFAULT 0,
+            total_comments INTEGER DEFAULT 0,
+            views_today INTEGER DEFAULT 0,
+            likes_today INTEGER DEFAULT 0,
+            comments_today INTEGER DEFAULT 0,
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            FOREIGN KEY (podcast_id) REFERENCES podcasts(id) ON DELETE CASCADE,
+            FOREIGN KEY (episode_id) REFERENCES episodes(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Create sync_jobs table for tracking sync operations
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sync_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_type TEXT NOT NULL CHECK(job_type IN ('full_sync', 'new_episodes_check', 'analytics_calculation')),
+            status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'running', 'completed', 'failed', 'paused')),
+            started_at INTEGER,
+            completed_at INTEGER,
+            duration_seconds INTEGER,
+            items_processed INTEGER DEFAULT 0,
+            items_updated INTEGER DEFAULT 0,
+            items_failed INTEGER DEFAULT 0,
+            new_episodes_found INTEGER DEFAULT 0,
+            error_message TEXT,
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+        )
+    ''')
+    
+    # Create sync_errors table for detailed error logging
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sync_errors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sync_job_id INTEGER NOT NULL,
+            entity_type TEXT NOT NULL CHECK(entity_type IN ('podcast', 'episode')),
+            entity_id INTEGER,
+            error_type TEXT NOT NULL CHECK(error_type IN ('api_error', 'rate_limit', 'not_found', 'invalid_data', 'network_error')),
+            error_message TEXT,
+            youtube_id TEXT,
+            retry_attempt INTEGER DEFAULT 0,
+            resolved INTEGER DEFAULT 0,
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            FOREIGN KEY (sync_job_id) REFERENCES sync_jobs(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Create youtube_api_usage table for quota tracking
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS youtube_api_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usage_date INTEGER NOT NULL UNIQUE,
+            quota_used INTEGER DEFAULT 0,
+            quota_limit INTEGER DEFAULT 10000,
+            requests_count INTEGER DEFAULT 0,
+            successful_requests INTEGER DEFAULT 0,
+            failed_requests INTEGER DEFAULT 0,
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+        )
+    ''')
+    
+    # Create sync_config table for configuration settings
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sync_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            config_key TEXT NOT NULL UNIQUE,
+            config_value TEXT,
+            config_type TEXT DEFAULT 'string' CHECK(config_type IN ('string', 'number', 'boolean', 'json')),
+            description TEXT,
+            updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+        )
+    ''')
+    
     # Create indexes for better query performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_podcasts_status ON podcasts(status)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_podcasts_rating ON podcasts(rating DESC)')
