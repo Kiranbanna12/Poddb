@@ -10,7 +10,7 @@ import sys
 from typing import Dict, Any, Optional
 
 # Backend URL from frontend .env
-BASE_URL = "https://podsync.preview.emergentagent.com/api"
+BASE_URL = "https://admin-data-sync.preview.emergentagent.com/api"
 
 class ContributionTester:
     def __init__(self):

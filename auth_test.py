@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional
 import jwt
 
 # Backend URL from frontend .env
-BASE_URL = "https://podsync.preview.emergentagent.com/api"
+BASE_URL = "https://admin-data-sync.preview.emergentagent.com/api"
 
 class AuthTester:
     def __init__(self):
