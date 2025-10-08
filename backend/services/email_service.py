@@ -219,3 +219,21 @@ def send_account_banned_email(email: str, username: str, reason: str) -> bool:
     """Send account banned notification email (placeholder)"""
     logger.info(f"Account banned email would be sent to {email} for user {username}, reason: {reason}")
     return True
+
+
+def send_contribution_approved_email(email: str, username: str, contribution_title: str) -> bool:
+    """Send contribution approved notification email (placeholder)"""
+    logger.info(f"Contribution approved email would be sent to {email} for user {username}, contribution: {contribution_title}")
+    return True
+
+
+def send_contribution_rejected_email(email: str, username: str, contribution_title: str, reason: str) -> bool:
+    """Send contribution rejected notification email (placeholder)"""
+    logger.info(f"Contribution rejected email would be sent to {email} for user {username}, contribution: {contribution_title}, reason: {reason}")
+    return True
+
+
+def send_content_updated_email(email: str, username: str, content_title: str, changes: str) -> bool:
+    """Send content updated notification email (placeholder)"""
+    logger.info(f"Content updated email would be sent to {email} for user {username}, content: {content_title}, changes: {changes}")
+    return True
