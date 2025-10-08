@@ -466,6 +466,19 @@ def init_database():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_login_attempts_identifier ON login_attempts(identifier)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_activity_logs_user ON user_activity_logs(user_id)')
     
+    # Create indexes for sync tables
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_analytics_podcast ON daily_analytics(podcast_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_analytics_episode ON daily_analytics(episode_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_analytics_date ON daily_analytics(snapshot_date)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sync_jobs_status ON sync_jobs(status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sync_jobs_type ON sync_jobs(job_type)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sync_jobs_created ON sync_jobs(created_at DESC)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sync_errors_job ON sync_errors(sync_job_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sync_errors_entity ON sync_errors(entity_type, entity_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sync_errors_resolved ON sync_errors(resolved)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_youtube_api_usage_date ON youtube_api_usage(usage_date)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_admin ON users(is_admin)')
+    
     conn.commit()
     conn.close()
     print("✓ Database tables created successfully")
