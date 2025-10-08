@@ -492,6 +492,22 @@ frontend:
              - Weekly cleanup on Sunday 4 AM UTC
           5. Installed tzlocal dependency for scheduler
           6. Admin authentication required for all sync endpoints
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Fixed sync system issues reported by user:
+          1. Backend Fix: Completed check_new_episodes() implementation in sync_service.py
+             - Function was incomplete with placeholder comment
+             - Now properly fetches ALL episodes from YouTube for each podcast
+             - Tracks new episodes count and sends notifications
+             - Includes API quota checking and error handling
+             - Returns detailed stats (items_processed, new_episodes_found, duration)
+          2. Frontend Fix: Removed syncEnabled dependency from sync button disabled state
+             - Buttons were disabled when sync system was disabled
+             - Now buttons only disabled during active syncing operation
+             - Users can click buttons even when system is in disabled state
+             - Proper visual feedback with cursor and opacity changes
+          3. Backend restarted successfully with scheduler running
 
   - task: "Automated Sync System - Frontend"
     implemented: true
