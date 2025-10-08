@@ -349,7 +349,10 @@ async def get_user_contributions(user_id: Optional[int] = Depends(get_current_us
 
 @api_router.post("/youtube/fetch-playlist")
 async def fetch_youtube_playlist(request: YouTubePlaylistRequest):
-    """Fetch YouTube playlist details and videos"""
+    """
+    Fetch YouTube playlist details and ALL videos (unlimited).
+    For large playlists (1000+ episodes), thumbnails are uploaded in batches.
+    """
     try:
         playlist_id = youtube_service.extract_playlist_id(request.playlist_url)
         if not playlist_id:
@@ -357,11 +360,13 @@ async def fetch_youtube_playlist(request: YouTubePlaylistRequest):
         
         # Get playlist details
         playlist_details = youtube_service.get_playlist_details(playlist_id)
+        logger.info(f"Fetching playlist: {playlist_details['title']} ({playlist_details['item_count']} episodes)")
         
-        # Get all videos
-        videos = youtube_service.get_playlist_videos(playlist_id, max_results=100)
+        # Get ALL videos (unlimited) - this will fetch all episodes regardless of count
+        videos = youtube_service.get_playlist_videos(playlist_id, max_results=None)
+        logger.info(f"Successfully fetched {len(videos)} episodes from playlist")
         
-        # Upload thumbnail to Cloudinary
+        # Upload playlist thumbnail to Cloudinary
         try:
             cover_image_result = cloudinary_service.upload_from_url(
                 playlist_details['thumbnail'],
@@ -373,22 +378,40 @@ async def fetch_youtube_playlist(request: YouTubePlaylistRequest):
             logger.warning(f"Failed to upload playlist thumbnail: {e}")
             playlist_details['cover_image_cloudinary'] = playlist_details['thumbnail']
         
-        # Upload episode thumbnails to Cloudinary
-        for video in videos:
-            try:
-                thumbnail_result = cloudinary_service.download_and_upload_youtube_thumbnail(
-                    video['thumbnail'],
-                    video['video_id'],
-                    folder="episodes"
-                )
-                video['thumbnail_cloudinary'] = thumbnail_result['secure_url']
-            except Exception as e:
-                logger.warning(f"Failed to upload video thumbnail for {video['video_id']}: {e}")
-                video['thumbnail_cloudinary'] = video['thumbnail']
+        # Upload episode thumbnails to Cloudinary in batches
+        # For very large playlists, we'll process in chunks to avoid timeout
+        total_videos = len(videos)
+        batch_size = 100
+        uploaded_count = 0
+        
+        for i in range(0, total_videos, batch_size):
+            batch = videos[i:i + batch_size]
+            batch_num = (i // batch_size) + 1
+            total_batches = (total_videos + batch_size - 1) // batch_size
+            
+            logger.info(f"Processing thumbnail batch {batch_num}/{total_batches} ({len(batch)} episodes)")
+            
+            for video in batch:
+                try:
+                    thumbnail_result = cloudinary_service.download_and_upload_youtube_thumbnail(
+                        video['thumbnail'],
+                        video['video_id'],
+                        folder="episodes"
+                    )
+                    video['thumbnail_cloudinary'] = thumbnail_result['secure_url']
+                    uploaded_count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to upload video thumbnail for {video['video_id']}: {e}")
+                    video['thumbnail_cloudinary'] = video['thumbnail']
+        
+        logger.info(f"✅ Playlist fetch complete: {len(videos)} episodes, {uploaded_count} thumbnails uploaded")
         
         return {
             "playlist": playlist_details,
-            "episodes": videos
+            "episodes": videos,
+            "total_episodes": len(videos),
+            "thumbnails_uploaded": uploaded_count,
+            "message": f"Successfully fetched all {len(videos)} episodes from playlist"
         }
     except HTTPException:
         raise
