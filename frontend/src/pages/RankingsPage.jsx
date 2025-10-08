@@ -73,18 +73,7 @@ const RankingsPage = () => {
     return <div className="flex items-center text-[#AAAAAA] text-sm"><Minus size={16} /></div>;
   };
 
-  // Add mock rank changes to podcasts
-  const rankedPodcasts = mockPodcasts.map((podcast, index) => ({
-    ...podcast,
-    rank: index + 1,
-    rankChange: index === 0 ? 2 : index === 1 ? -1 : index === 2 ? 0 : Math.floor(Math.random() * 10) - 5
-  }));
-
-  const filteredPodcasts = rankedPodcasts.filter(podcast => {
-    if (selectedCategory !== 'all' && !podcast.categories.includes(selectedCategory)) return false;
-    if (selectedLanguage !== 'all' && !podcast.languages.includes(selectedLanguage)) return false;
-    return true;
-  });
+  const filteredPodcasts = rankedPodcasts;
 
   return (
     <div className="min-h-screen bg-[#141414] py-8 px-4">
