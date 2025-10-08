@@ -38,78 +38,76 @@ class AuthTester:
             print(f"   Response: {response_data}")
         print()
 
-    def test_username_availability_check_available(self):
-        """Test 1: Username Availability Check - Available"""
-        try:
-            url = f"{self.base_url}/auth/check-username/{self.test_user_data['username']}"
-            response = self.session.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "available" in data and data["available"] == True:
-                    self.log_test("Username Availability Check (Available)", True, 
-                                f"Username '{self.test_user_data['username']}' is available")
-                else:
-                    self.log_test("Username Availability Check (Available)", False, 
-                                "Expected available: true", data)
-            elif response.status_code == 404:
-                self.log_test("Username Availability Check (Available)", False, 
-                            "Endpoint not implemented - GET /api/auth/check-username/{username}")
-            else:
-                self.log_test("Username Availability Check (Available)", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-                
-        except Exception as e:
-            self.log_test("Username Availability Check (Available)", False, f"Exception: {str(e)}")
-
-    def test_email_availability_check_available(self):
-        """Test 2: Email Availability Check - Available"""
-        try:
-            url = f"{self.base_url}/auth/check-email/{self.test_user_data['email']}"
-            response = self.session.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "available" in data and data["available"] == True:
-                    self.log_test("Email Availability Check (Available)", True, 
-                                f"Email '{self.test_user_data['email']}' is available")
-                else:
-                    self.log_test("Email Availability Check (Available)", False, 
-                                "Expected available: true", data)
-            elif response.status_code == 404:
-                self.log_test("Email Availability Check (Available)", False, 
-                            "Endpoint not implemented - GET /api/auth/check-email/{email}")
-            else:
-                self.log_test("Email Availability Check (Available)", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-                
-        except Exception as e:
-            self.log_test("Email Availability Check (Available)", False, f"Exception: {str(e)}")
-
     def test_user_registration(self):
-        """Test 3: User Registration"""
+        """Test 1: User Registration Flow"""
         try:
             url = f"{self.base_url}/auth/register"
-            response = self.session.post(url, json=self.test_user_data, timeout=10)
+            payload = {
+                "username": "sarah_podcaster",
+                "email": "sarah.podcaster@example.com",
+                "password": "SecurePass123!"
+            }
+            
+            response = self.session.post(url, json=payload, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check for expected fields in response
-                if "success" in data and data["success"]:
-                    if "user_id" in data:
-                        self.log_test("User Registration", True, 
-                                    f"User registered successfully with ID: {data['user_id']}")
-                    else:
-                        self.log_test("User Registration", True, 
-                                    "User registered successfully (no user_id in response)")
-                elif "user" in data and "token" in data:
-                    # Alternative response format
-                    self.log_test("User Registration", True, 
-                                f"User registered successfully: {data['user'].get('username', 'N/A')}")
+                # Check required fields in response
+                required_fields = ["user", "token"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    self.log_test("User Registration", False, 
+                                f"Missing fields in response: {missing_fields}", data)
+                    return
+                
+                # Verify user object structure
+                user = data["user"]
+                user_required_fields = ["id", "username", "email"]
+                user_missing_fields = [field for field in user_required_fields if field not in user]
+                
+                if user_missing_fields:
+                    self.log_test("User Registration", False, 
+                                f"Missing user fields: {user_missing_fields}", data)
+                    return
+                
+                # Verify JWT token
+                token = data["token"]
+                try:
+                    # Decode without verification to check structure
+                    decoded = jwt.decode(token, options={"verify_signature": False})
+                    if "user_id" not in decoded:
+                        self.log_test("User Registration", False, 
+                                    "JWT token missing user_id", data)
+                        return
+                except Exception as e:
+                    self.log_test("User Registration", False, 
+                                f"Invalid JWT token: {str(e)}", data)
+                    return
+                
+                # Store for later tests
+                self.test_user_token = token
+                self.test_user_data = user
+                
+                details = f"User created: {user['username']} ({user['email']}) with valid JWT token"
+                self.log_test("User Registration", True, details)
+                
+            elif response.status_code == 400:
+                # User might already exist, try with different email
+                payload["email"] = "sarah.podcaster2@example.com"
+                payload["username"] = "sarah_podcaster2"
+                
+                response = self.session.post(url, json=payload, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    self.test_user_token = data["token"]
+                    self.test_user_data = data["user"]
+                    details = f"User created with alternate email: {data['user']['username']}"
+                    self.log_test("User Registration", True, details)
                 else:
                     self.log_test("User Registration", False, 
-                                "Missing success indicator or user data", data)
+                                f"HTTP {response.status_code}: {response.text}")
             else:
                 self.log_test("User Registration", False, 
                             f"HTTP {response.status_code}: {response.text}")
@@ -117,325 +115,272 @@ class AuthTester:
         except Exception as e:
             self.log_test("User Registration", False, f"Exception: {str(e)}")
 
-    def test_username_availability_check_taken(self):
-        """Test 4: Username Availability Check - Taken (after registration)"""
-        try:
-            url = f"{self.base_url}/auth/check-username/{self.test_user_data['username']}"
-            response = self.session.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "available" in data and data["available"] == False:
-                    self.log_test("Username Availability Check (Taken)", True, 
-                                f"Username '{self.test_user_data['username']}' is now taken")
-                else:
-                    self.log_test("Username Availability Check (Taken)", False, 
-                                "Expected available: false after registration", data)
-            elif response.status_code == 404:
-                self.log_test("Username Availability Check (Taken)", False, 
-                            "Endpoint not implemented - GET /api/auth/check-username/{username}")
-            else:
-                self.log_test("Username Availability Check (Taken)", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-                
-        except Exception as e:
-            self.log_test("Username Availability Check (Taken)", False, f"Exception: {str(e)}")
-
-    def test_login_with_credentials(self):
-        """Test 5: Login with Credentials"""
+    def test_login_with_email(self):
+        """Test 2: Login with Email in identifier field"""
         try:
             url = f"{self.base_url}/auth/login"
-            login_data = {
-                "identifier": self.test_user_data["username"],  # or email
-                "password": self.test_user_data["password"],
-                "remember_me": False
+            payload = {
+                "identifier": "sarah.podcaster@example.com",  # Using email as identifier
+                "password": "SecurePass123!"
             }
             
-            # Try with identifier field first
-            response = self.session.post(url, json=login_data, timeout=10)
-            
-            if response.status_code != 200:
-                # Try with email field (alternative format)
-                login_data_alt = {
-                    "email": self.test_user_data["email"],
-                    "password": self.test_user_data["password"]
-                }
-                response = self.session.post(url, json=login_data_alt, timeout=10)
+            response = self.session.post(url, json=payload, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check for session token or JWT token
-                if "session_token" in data:
-                    self.session_token = data["session_token"]
-                    # Set cookie for subsequent requests
-                    self.session.cookies.set("session_token", self.session_token)
-                    self.log_test("Login with Credentials", True, 
-                                f"Login successful, session token received")
-                elif "token" in data:
-                    self.session_token = data["token"]
-                    # Set Authorization header for subsequent requests
-                    self.session.headers.update({"Authorization": f"Bearer {self.session_token}"})
-                    self.log_test("Login with Credentials", True, 
-                                f"Login successful, JWT token received")
+                # Check required fields in response
+                required_fields = ["success", "user", "token", "message"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    self.log_test("Login with Email", False, 
+                                f"Missing fields in response: {missing_fields}", data)
+                    return
+                
+                # Verify success field
+                if data.get("success") != True:
+                    self.log_test("Login with Email", False, 
+                                "Success field is not true", data)
+                    return
+                
+                # Verify JWT token
+                token = data["token"]
+                try:
+                    decoded = jwt.decode(token, options={"verify_signature": False})
+                    if "user_id" not in decoded:
+                        self.log_test("Login with Email", False, 
+                                    "JWT token missing user_id", data)
+                        return
+                except Exception as e:
+                    self.log_test("Login with Email", False, 
+                                f"Invalid JWT token: {str(e)}", data)
+                    return
+                
+                user = data["user"]
+                details = f"Login successful for {user.get('email', 'N/A')} with valid JWT token"
+                self.log_test("Login with Email", True, details)
+                
+            elif response.status_code == 401:
+                # Try with the alternate email if first one failed
+                payload["identifier"] = "sarah.podcaster2@example.com"
+                response = self.session.post(url, json=payload, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("success") == True and "token" in data:
+                        details = f"Login successful with alternate email"
+                        self.log_test("Login with Email", True, details)
+                    else:
+                        self.log_test("Login with Email", False, 
+                                    "Missing success or token in response", data)
                 else:
-                    self.log_test("Login with Credentials", False, 
-                                "No session_token or token in response", data)
+                    self.log_test("Login with Email", False, 
+                                f"HTTP {response.status_code}: {response.text}")
             else:
-                self.log_test("Login with Credentials", False, 
+                self.log_test("Login with Email", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Login with Credentials", False, f"Exception: {str(e)}")
+            self.log_test("Login with Email", False, f"Exception: {str(e)}")
 
-    def test_get_current_user(self):
-        """Test 6: Get Current User"""
-        if not self.session_token:
-            self.log_test("Get Current User", False, "No session token available (login failed)")
+    def test_login_with_username(self):
+        """Test 3: Login with Username in identifier field"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            payload = {
+                "identifier": "sarah_podcaster",  # Using username as identifier
+                "password": "SecurePass123!"
+            }
+            
+            response = self.session.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check required fields
+                if data.get("success") != True or "token" not in data:
+                    self.log_test("Login with Username", False, 
+                                "Missing success or token in response", data)
+                    return
+                
+                # Verify JWT token
+                token = data["token"]
+                try:
+                    decoded = jwt.decode(token, options={"verify_signature": False})
+                    if "user_id" not in decoded:
+                        self.log_test("Login with Username", False, 
+                                    "JWT token missing user_id", data)
+                        return
+                except Exception as e:
+                    self.log_test("Login with Username", False, 
+                                f"Invalid JWT token: {str(e)}", data)
+                    return
+                
+                user = data["user"]
+                details = f"Login successful for username {user.get('username', 'N/A')} with valid JWT token"
+                self.log_test("Login with Username", True, details)
+                
+            elif response.status_code == 401:
+                # Try with alternate username
+                payload["identifier"] = "sarah_podcaster2"
+                response = self.session.post(url, json=payload, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("success") == True and "token" in data:
+                        details = f"Login successful with alternate username"
+                        self.log_test("Login with Username", True, details)
+                    else:
+                        self.log_test("Login with Username", False, 
+                                    "Missing success or token in response", data)
+                else:
+                    self.log_test("Login with Username", False, 
+                                f"HTTP {response.status_code}: {response.text}")
+            else:
+                self.log_test("Login with Username", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Login with Username", False, f"Exception: {str(e)}")
+
+    def test_login_invalid_password(self):
+        """Test 4: Login with Invalid Password"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            payload = {
+                "identifier": "sarah.podcaster@example.com",
+                "password": "WrongPassword123!"
+            }
+            
+            response = self.session.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 401:
+                data = response.json()
+                if "detail" in data:
+                    details = f"Correctly returned 401 with message: {data['detail']}"
+                    self.log_test("Login Invalid Password", True, details)
+                else:
+                    self.log_test("Login Invalid Password", True, 
+                                "Correctly returned 401 error")
+            else:
+                self.log_test("Login Invalid Password", False, 
+                            f"Expected 401, got HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Login Invalid Password", False, f"Exception: {str(e)}")
+
+    def test_login_nonexistent_user(self):
+        """Test 5: Login with Non-existent User"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            payload = {
+                "identifier": "nonexistent.user@example.com",
+                "password": "SomePassword123!"
+            }
+            
+            response = self.session.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 401:
+                data = response.json()
+                if "detail" in data:
+                    details = f"Correctly returned 401 with message: {data['detail']}"
+                    self.log_test("Login Nonexistent User", True, details)
+                else:
+                    self.log_test("Login Nonexistent User", True, 
+                                "Correctly returned 401 error")
+            else:
+                self.log_test("Login Nonexistent User", False, 
+                            f"Expected 401, got HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Login Nonexistent User", False, f"Exception: {str(e)}")
+
+    def test_protected_endpoint_with_token(self):
+        """Test 6: Protected Endpoint with Valid Token"""
+        if not self.test_user_token:
+            self.log_test("Protected Endpoint with Token", False, 
+                        "No valid token available from previous tests")
             return
             
         try:
             url = f"{self.base_url}/auth/me"
+            headers = {
+                "Authorization": f"Bearer {self.test_user_token}"
+            }
+            
+            response = self.session.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check if user data is returned
+                required_fields = ["id", "username", "email"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    self.log_test("Protected Endpoint with Token", False, 
+                                f"Missing user fields: {missing_fields}", data)
+                    return
+                
+                # Verify no password_hash in response
+                if "password_hash" in data:
+                    self.log_test("Protected Endpoint with Token", False, 
+                                "Response contains password_hash (security issue)", data)
+                    return
+                
+                details = f"User data retrieved: {data.get('username', 'N/A')} ({data.get('email', 'N/A')})"
+                self.log_test("Protected Endpoint with Token", True, details)
+                
+            else:
+                self.log_test("Protected Endpoint with Token", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Protected Endpoint with Token", False, f"Exception: {str(e)}")
+
+    def test_protected_endpoint_without_token(self):
+        """Test 7: Protected Endpoint without Token"""
+        try:
+            url = f"{self.base_url}/auth/me"
+            
             response = self.session.get(url, timeout=10)
             
-            if response.status_code == 200:
+            if response.status_code == 401:
                 data = response.json()
-                
-                if "username" in data and data["username"] == self.test_user_data["username"]:
-                    self.log_test("Get Current User", True, 
-                                f"Current user retrieved: {data['username']}")
+                if "detail" in data:
+                    details = f"Correctly returned 401 with message: {data['detail']}"
+                    self.log_test("Protected Endpoint without Token", True, details)
                 else:
-                    self.log_test("Get Current User", False, 
-                                "Username mismatch or missing", data)
-            elif response.status_code == 401:
-                self.log_test("Get Current User", False, 
-                            "Authentication failed - check session token format")
+                    self.log_test("Protected Endpoint without Token", True, 
+                                "Correctly returned 401 error")
             else:
-                self.log_test("Get Current User", False, 
-                            f"HTTP {response.status_code}: {response.text}")
+                self.log_test("Protected Endpoint without Token", False, 
+                            f"Expected 401, got HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Get Current User", False, f"Exception: {str(e)}")
+            self.log_test("Protected Endpoint without Token", False, f"Exception: {str(e)}")
 
-    def test_get_user_profile(self):
-        """Test 7: Get User Profile"""
-        if not self.session_token:
-            self.log_test("Get User Profile", False, "No session token available (login failed)")
-            return
-            
+    def test_protected_endpoint_invalid_token(self):
+        """Test 8: Protected Endpoint with Invalid Token"""
         try:
-            url = f"{self.base_url}/profile"
-            response = self.session.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                self.log_test("Get User Profile", True, 
-                            f"Profile retrieved for user: {data.get('username', 'N/A')}")
-            elif response.status_code == 404:
-                self.log_test("Get User Profile", False, 
-                            "Endpoint not implemented - GET /api/profile")
-            elif response.status_code == 401:
-                self.log_test("Get User Profile", False, 
-                            "Authentication failed - check session token")
-            else:
-                self.log_test("Get User Profile", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-                
-        except Exception as e:
-            self.log_test("Get User Profile", False, f"Exception: {str(e)}")
-
-    def test_update_profile(self):
-        """Test 8: Update Profile"""
-        if not self.session_token:
-            self.log_test("Update Profile", False, "No session token available (login failed)")
-            return
-            
-        try:
-            url = f"{self.base_url}/profile"
-            update_data = {
-                "full_name": "Test User Updated",
-                "bio": "This is my test bio"
-            }
-            response = self.session.put(url, json=update_data, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "success" in data and data["success"]:
-                    self.log_test("Update Profile", True, "Profile updated successfully")
-                else:
-                    self.log_test("Update Profile", True, "Profile update response received")
-            elif response.status_code == 404:
-                self.log_test("Update Profile", False, 
-                            "Endpoint not implemented - PUT /api/profile")
-            elif response.status_code == 401:
-                self.log_test("Update Profile", False, 
-                            "Authentication failed - check session token")
-            else:
-                self.log_test("Update Profile", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-                
-        except Exception as e:
-            self.log_test("Update Profile", False, f"Exception: {str(e)}")
-
-    def test_change_password(self):
-        """Test 9: Change Password"""
-        if not self.session_token:
-            self.log_test("Change Password", False, "No session token available (login failed)")
-            return
-            
-        try:
-            url = f"{self.base_url}/profile/change-password"
-            password_data = {
-                "current_password": self.test_user_data["password"],
-                "new_password": self.new_password,
-                "confirm_password": self.new_password
-            }
-            response = self.session.put(url, json=password_data, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "success" in data and data["success"]:
-                    self.log_test("Change Password", True, "Password changed successfully")
-                    # Update our test password for subsequent tests
-                    self.test_user_data["password"] = self.new_password
-                else:
-                    self.log_test("Change Password", True, "Password change response received")
-                    self.test_user_data["password"] = self.new_password
-            elif response.status_code == 404:
-                self.log_test("Change Password", False, 
-                            "Endpoint not implemented - PUT /api/profile/change-password")
-            elif response.status_code == 401:
-                self.log_test("Change Password", False, 
-                            "Authentication failed - check session token")
-            else:
-                self.log_test("Change Password", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-                
-        except Exception as e:
-            self.log_test("Change Password", False, f"Exception: {str(e)}")
-
-    def test_login_with_new_password(self):
-        """Test 10: Login with New Password"""
-        try:
-            url = f"{self.base_url}/auth/login"
-            login_data = {
-                "identifier": self.test_user_data["username"],
-                "password": self.new_password,
-                "remember_me": False
+            url = f"{self.base_url}/auth/me"
+            headers = {
+                "Authorization": "Bearer invalid.jwt.token"
             }
             
-            # Try with identifier field first
-            response = self.session.post(url, json=login_data, timeout=10)
+            response = self.session.get(url, headers=headers, timeout=10)
             
-            if response.status_code != 200:
-                # Try with email field (alternative format)
-                login_data_alt = {
-                    "email": self.test_user_data["email"],
-                    "password": self.new_password
-                }
-                response = self.session.post(url, json=login_data_alt, timeout=10)
-            
-            if response.status_code == 200:
+            if response.status_code == 401:
                 data = response.json()
-                self.log_test("Login with New Password", True, 
-                            "Login successful with new password")
+                details = f"Correctly returned 401 for invalid token"
+                self.log_test("Protected Endpoint Invalid Token", True, details)
             else:
-                self.log_test("Login with New Password", False, 
-                            f"HTTP {response.status_code}: {response.text}")
+                self.log_test("Protected Endpoint Invalid Token", False, 
+                            f"Expected 401, got HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Login with New Password", False, f"Exception: {str(e)}")
-
-    def test_get_active_sessions(self):
-        """Test 11: Get Active Sessions"""
-        if not self.session_token:
-            self.log_test("Get Active Sessions", False, "No session token available (login failed)")
-            return
-            
-        try:
-            url = f"{self.base_url}/profile/sessions"
-            response = self.session.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if isinstance(data, list):
-                    self.log_test("Get Active Sessions", True, 
-                                f"Retrieved {len(data)} active sessions")
-                else:
-                    self.log_test("Get Active Sessions", True, 
-                                "Active sessions response received")
-            elif response.status_code == 404:
-                self.log_test("Get Active Sessions", False, 
-                            "Endpoint not implemented - GET /api/profile/sessions")
-            elif response.status_code == 401:
-                self.log_test("Get Active Sessions", False, 
-                            "Authentication failed - check session token")
-            else:
-                self.log_test("Get Active Sessions", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-                
-        except Exception as e:
-            self.log_test("Get Active Sessions", False, f"Exception: {str(e)}")
-
-    def test_password_reset_flow(self):
-        """Test 12: Password Reset Flow"""
-        try:
-            url = f"{self.base_url}/auth/forgot-password"
-            reset_data = {
-                "email": self.test_user_data["email"]
-            }
-            response = self.session.post(url, json=reset_data, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "success" in data and data["success"]:
-                    self.log_test("Password Reset Flow", True, 
-                                "Password reset request successful")
-                else:
-                    self.log_test("Password Reset Flow", True, 
-                                "Password reset response received")
-            elif response.status_code == 404:
-                self.log_test("Password Reset Flow", False, 
-                            "Endpoint not implemented - POST /api/auth/forgot-password")
-            else:
-                self.log_test("Password Reset Flow", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-                
-        except Exception as e:
-            self.log_test("Password Reset Flow", False, f"Exception: {str(e)}")
-
-    def test_logout(self):
-        """Test 13: Logout"""
-        if not self.session_token:
-            self.log_test("Logout", False, "No session token available (login failed)")
-            return
-            
-        try:
-            url = f"{self.base_url}/auth/logout"
-            response = self.session.post(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "success" in data and data["success"]:
-                    self.log_test("Logout", True, "Logout successful")
-                else:
-                    self.log_test("Logout", True, "Logout response received")
-                # Clear session token
-                self.session_token = None
-                self.session.cookies.clear()
-                self.session.headers.pop("Authorization", None)
-            elif response.status_code == 404:
-                self.log_test("Logout", False, 
-                            "Endpoint not implemented - POST /api/auth/logout")
-            elif response.status_code == 401:
-                self.log_test("Logout", False, 
-                            "Authentication failed - check session token")
-            else:
-                self.log_test("Logout", False, 
-                            f"HTTP {response.status_code}: {response.text}")
-                
-        except Exception as e:
-            self.log_test("Logout", False, f"Exception: {str(e)}")
+            self.log_test("Protected Endpoint Invalid Token", False, f"Exception: {str(e)}")
 
     def run_all_tests(self):
         """Run all authentication tests"""
