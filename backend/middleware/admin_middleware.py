@@ -8,7 +8,7 @@ import jwt
 import os
 
 # Get JWT secret from environment
-JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key-change-in-production')
+JWT_SECRET = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
 JWT_ALGORITHM = 'HS256'
 
 security = HTTPBearer()
