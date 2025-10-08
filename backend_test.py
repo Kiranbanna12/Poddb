@@ -240,33 +240,35 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("Admin Contribution Stats", False, f"Exception: {str(e)}")
 
-    def test_add_new_language(self):
-        """Test Suite 2: Smart Search - Add New Language"""
-        try:
-            url = f"{self.base_url}/search/languages/add"
-            params = {
-                "code": "test",
-                "name": "TestLang",
-                "native_name": "Test"
-            }
+    def test_admin_contributions_list(self):
+        """Test Suite 3: Admin Contribution APIs - Get Contributions List"""
+        if not self.admin_token:
+            self.log_test("Admin Contributions List", False, "No admin token available")
+            return
             
-            response = self.session.post(url, params=params, timeout=10)
+        try:
+            url = f"{self.base_url}/admin/contributions"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            params = {"page": 1, "limit": 20}
+            
+            response = self.session.get(url, headers=headers, params=params, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if "code" in data and "name" in data:
-                    details = f"Created language: {data['name']} ({data['code']})"
-                    self.log_test("Add New Language", True, details)
+                if "success" in data and data["success"] and "contributions" in data:
+                    contributions = data["contributions"]
+                    details = f"Retrieved {len(contributions)} contributions"
+                    self.log_test("Admin Contributions List", True, details)
                 else:
-                    self.log_test("Add New Language", False, 
-                                "Missing 'code' or 'name' in response", data)
+                    self.log_test("Admin Contributions List", False, 
+                                "Missing 'success' or 'contributions' in response", data)
             else:
-                self.log_test("Add New Language", False, 
+                self.log_test("Admin Contributions List", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Add New Language", False, f"Exception: {str(e)}")
+            self.log_test("Admin Contributions List", False, f"Exception: {str(e)}")
 
     def test_search_locations(self):
         """Test Suite 2: Smart Search - Locations"""
