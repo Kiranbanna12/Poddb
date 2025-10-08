@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, GripVertical, Youtube, Video } from 'lucide-react';
+import { Plus, Trash2, Edit2, GripVertical, Youtube, Video, ChevronDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
@@ -15,6 +15,9 @@ const EpisodeManagementSection = ({ episodes, onEpisodesChange, mode }) => {
   const [addMode, setAddMode] = useState('single'); // 'single' or 'playlist'
   const [loading, setLoading] = useState(false);
   
+  // Display state - Load More functionality
+  const [displayCount, setDisplayCount] = useState(10);
+  
   // Add Episode Form State
   const [videoUrl, setVideoUrl] = useState('');
   const [playlistUrl, setPlaylistUrl] = useState('');
@@ -23,6 +26,10 @@ const EpisodeManagementSection = ({ episodes, onEpisodesChange, mode }) => {
   const [seasonNumber, setSeasonNumber] = useState('');
   const [seasonTitle, setSeasonTitle] = useState('');
   const [seasonDescription, setSeasonDescription] = useState('');
+  
+  const handleLoadMore = () => {
+    setDisplayCount(prev => Math.min(prev + 20, episodes.length));
+  };
 
   const handleAddSingleEpisode = async () => {
     if (!videoUrl) {
