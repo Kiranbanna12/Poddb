@@ -864,6 +864,39 @@ agent_communication:
       RECOMMENDATION: YouTube playlist pagination API is working perfectly. Main agent can proceed with frontend integration or mark as complete.
   - agent: "main"
     message: |
+      SYNC SYSTEM FIXES APPLIED - READY FOR TESTING ✅
+      
+      User reported two critical issues:
+      1. Sync button not clickable in admin panel
+      2. Episodes not fetching properly when clicking sync
+      
+      FIXES IMPLEMENTED:
+      
+      Backend Changes (/app/backend/services/sync_service.py):
+      - Completed check_new_episodes() function implementation (was incomplete placeholder)
+      - Function now properly:
+        * Fetches all approved podcasts with YouTube playlist IDs
+        * Syncs each podcast using youtube_sync_service
+        * Tracks new episodes found across all podcasts
+        * Implements API quota checking (pauses at 90%)
+        * Returns detailed stats with episode counts
+        * Sends notifications for new episodes
+      
+      Frontend Changes (/app/frontend/src/pages/admin/SyncManagementPage.jsx):
+      - Fixed sync button disabled logic
+      - Removed syncEnabled dependency from button disabled state
+      - Buttons now only disabled during active syncing operation
+      - Added proper visual feedback (cursor, opacity changes)
+      
+      TESTING REQUIRED:
+      1. Test sync endpoints (especially check-new-episodes)
+      2. Verify episodes are properly fetched
+      3. Check button clickability in admin panel
+      4. Verify sync status updates properly
+      
+      Backend restarted successfully. All services running.
+  - agent: "main"
+    message: |
       AUTOMATED SYNC SYSTEM IMPLEMENTATION COMPLETE ✅
       
       🎯 COMPREHENSIVE IMPLEMENTATION:
