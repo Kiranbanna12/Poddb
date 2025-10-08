@@ -213,3 +213,9 @@ def send_email_change_verification(email: str, username: str, verification_token
     """Send email change verification (placeholder)"""
     logger.info(f"Email change verification would be sent to {email} for user {username}")
     return True
+
+
+def send_account_banned_email(email: str, username: str, reason: str) -> bool:
+    """Send account banned notification email (placeholder)"""
+    logger.info(f"Account banned email would be sent to {email} for user {username}, reason: {reason}")
+    return True
