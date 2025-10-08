@@ -283,6 +283,18 @@ def init_database():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_contributions_user ON contributions(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_contributions_status ON contributions(status)')
     
+    # Create indexes for authentication tables
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(session_token)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_verification_tokens_token ON verification_tokens(token)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_verification_tokens_identifier ON verification_tokens(identifier)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_login_attempts_identifier ON login_attempts(identifier)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_activity_logs_user ON user_activity_logs(user_id)')
+    
     conn.commit()
     conn.close()
     print("✓ Database tables created successfully")
