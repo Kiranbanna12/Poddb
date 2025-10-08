@@ -113,11 +113,20 @@ def init_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
             email TEXT NOT NULL UNIQUE,
+            email_verified INTEGER DEFAULT 0,
             password_hash TEXT NOT NULL,
+            full_name TEXT,
+            avatar_path TEXT,
+            bio TEXT,
             role TEXT DEFAULT 'user',
             contribution_count INTEGER DEFAULT 0,
+            review_count INTEGER DEFAULT 0,
+            is_active INTEGER DEFAULT 1,
+            is_banned INTEGER DEFAULT 0,
+            ban_reason TEXT,
+            last_login INTEGER,
             created_at INTEGER NOT NULL,
-            last_login INTEGER
+            updated_at INTEGER NOT NULL
         )
     ''')
     
