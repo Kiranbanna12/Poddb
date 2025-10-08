@@ -15,6 +15,7 @@ import {
   searchLocations,
   addNewCategory,
   addNewLanguage,
+  addNewLocation,
   createContribution
 } from '../../services/api';
 
