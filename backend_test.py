@@ -363,32 +363,35 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("Admin Sync Stats", False, f"Exception: {str(e)}")
 
-    def test_get_person_by_id(self):
-        """Test Suite 3: People/Team Management - Get Person by ID"""
-        if not self.created_person_id:
-            self.log_test("Get Person by ID", False, "No person ID available (create person test failed)")
+    def test_admin_sync_history(self):
+        """Test Suite 4: Admin Sync APIs - Get Sync History"""
+        if not self.admin_token:
+            self.log_test("Admin Sync History", False, "No admin token available")
             return
             
         try:
-            url = f"{self.base_url}/people/{self.created_person_id}"
+            url = f"{self.base_url}/admin/sync/history"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            params = {"page": 1, "limit": 10}
             
-            response = self.session.get(url, timeout=10)
+            response = self.session.get(url, headers=headers, params=params, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if "id" in data and "full_name" in data:
-                    details = f"Retrieved person: {data.get('full_name', 'N/A')}"
-                    self.log_test("Get Person by ID", True, details)
+                if "success" in data and data["success"] and "history" in data:
+                    history = data["history"]
+                    details = f"Retrieved {len(history)} sync history entries"
+                    self.log_test("Admin Sync History", True, details)
                 else:
-                    self.log_test("Get Person by ID", False, 
-                                "Missing required fields in response", data)
+                    self.log_test("Admin Sync History", False, 
+                                "Missing 'success' or 'history' in response", data)
             else:
-                self.log_test("Get Person by ID", False, 
+                self.log_test("Admin Sync History", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Get Person by ID", False, f"Exception: {str(e)}")
+            self.log_test("Admin Sync History", False, f"Exception: {str(e)}")
 
     def test_search_people_with_query(self):
         """Test Suite 3: People/Team Management - Search People with Query"""
