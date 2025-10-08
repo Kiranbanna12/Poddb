@@ -205,15 +205,18 @@ backend:
 
   - task: "API endpoints for people/team management"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Added endpoints for creating people, assigning to episodes, searching people"
+      - working: true
+        agent: "testing"
+        comment: "People/team management endpoints working correctly: POST /api/people (create person), GET /api/people/{id} (get person by ID), GET /api/search/people (search people). Successfully created and retrieved test person."
 
   - task: "API endpoints for episode management"
     implemented: true
