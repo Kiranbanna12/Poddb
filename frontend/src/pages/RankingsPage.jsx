@@ -115,9 +115,11 @@ const RankingsPage = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-[#2A2A2A] border-[#3A3A3A]">
                   <SelectItem value="all" className="text-white hover:bg-[#3A3A3A]">All Languages</SelectItem>
-                  <SelectItem value="Hindi" className="text-white hover:bg-[#3A3A3A]">Hindi</SelectItem>
-                  <SelectItem value="English" className="text-white hover:bg-[#3A3A3A]">English</SelectItem>
-                  <SelectItem value="Punjabi" className="text-white hover:bg-[#3A3A3A]">Punjabi</SelectItem>
+                  {languages.map(lang => (
+                    <SelectItem key={lang.id} value={lang.name} className="text-white hover:bg-[#3A3A3A]">
+                      {lang.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
