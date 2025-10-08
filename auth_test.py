@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Authentication System Backend API Testing Suite
-Tests complete authentication flow including registration, login, profile management, and session handling
+Authentication Testing Suite - Sign In/Login Fix
+Tests the authentication functionality that was just fixed based on review request
 """
 
 import requests
 import json
 import sys
 from typing import Dict, Any, Optional
+import jwt
 
 # Backend URL from frontend .env
 BASE_URL = "https://auth-doctor.preview.emergentagent.com/api"
@@ -17,16 +18,8 @@ class AuthTester:
         self.base_url = BASE_URL
         self.session = requests.Session()
         self.test_results = []
-        self.session_token = None
-        self.test_user_data = {
-            "username": "testuser123",
-            "email": "test@example.com",
-            "password": "Test@1234",
-            "confirm_password": "Test@1234",
-            "full_name": "Test User",
-            "terms_accepted": True
-        }
-        self.new_password = "NewTest@1234"
+        self.test_user_token = None
+        self.test_user_data = None
         
     def log_test(self, test_name: str, success: bool, details: str = "", response_data: Any = None):
         """Log test results"""
