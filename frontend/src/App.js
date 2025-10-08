@@ -6,20 +6,35 @@ import Footer from "./components/Footer";
 import HomePage from "./pages/HomePage";
 import RankingsPage from "./pages/RankingsPage";
 import ContributePageAdvanced from "./pages/ContributePageAdvanced";
+import LoginPage from "./pages/auth/LoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
 import { Toaster } from "./components/ui/sonner";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/rankings" element={<RankingsPage />} />
-          <Route path="/contribute" element={<ContributePageAdvanced />} />
-        </Routes>
-        <Footer />
-        <Toaster />
+        <AuthProvider>
+          <Navbar />
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/rankings" element={<RankingsPage />} />
+            <Route path="/auth/login" element={<LoginPage />} />
+            <Route path="/auth/register" element={<RegisterPage />} />
+            <Route
+              path="/contribute"
+              element={
+                <ProtectedRoute>
+                  <ContributePageAdvanced />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+          <Footer />
+          <Toaster />
+        </AuthProvider>
       </BrowserRouter>
     </div>
   );
