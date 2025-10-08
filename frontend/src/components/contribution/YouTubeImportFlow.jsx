@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { Youtube, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Youtube, AlertCircle, CheckCircle, Loader2, Download } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { toast } from 'sonner';
-import { fetchYouTubePlaylist } from '../../services/api';
+import { fetchYouTubePlaylistInitial, fetchYouTubePlaylistBatch } from '../../services/api';
 import ContributionForm from './ContributionForm';
 
 const YouTubeImportFlow = () => {
@@ -14,6 +14,13 @@ const YouTubeImportFlow = () => {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [error, setError] = useState(null);
   const [fetchedData, setFetchedData] = useState(null);
+  
+  // Background fetching state
+  const [isBackgroundFetching, setIsBackgroundFetching] = useState(false);
+  const [totalEpisodes, setTotalEpisodes] = useState(0);
+  const [loadedEpisodes, setLoadedEpisodes] = useState(0);
+  const [allEpisodes, setAllEpisodes] = useState([]);
+  const backgroundFetchRef = useRef(null);
 
   const validateYouTubeUrl = (url) => {
     return url.includes('youtube.com/playlist?list=') || url.includes('list=');
