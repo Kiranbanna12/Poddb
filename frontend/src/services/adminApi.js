@@ -122,7 +122,7 @@ export const mergePeople = async (personId1, personId2) => {
 };
 
 // ============================================
-// SYNC MANAGEMENT API
+// SYNC MANAGEMENT API (OLD)
 // ============================================
 
 export const getSyncStats = async () => {
@@ -147,6 +147,88 @@ export const updateSyncSettings = async (playlistId, settings) => {
 
 export const deletePlaylistSync = async (playlistId) => {
   const response = await api.delete(`/api/admin/sync/playlists/${playlistId}`);
+  return response.data;
+};
+
+// ============================================
+// NEW SYNC SYSTEM API
+// ============================================
+
+export const getSyncStatus = async () => {
+  const response = await api.get('/api/sync/status');
+  return response.data;
+};
+
+export const getSyncDashboard = async () => {
+  const response = await api.get('/api/sync/dashboard');
+  return response.data;
+};
+
+export const runFullSync = async () => {
+  const response = await api.post('/api/sync/run-full-sync');
+  return response.data;
+};
+
+export const checkNewEpisodes = async () => {
+  const response = await api.post('/api/sync/check-new-episodes');
+  return response.data;
+};
+
+export const syncSinglePodcast = async (podcastId) => {
+  const response = await api.post(`/api/sync/sync-podcast/${podcastId}`);
+  return response.data;
+};
+
+export const recalculateAnalytics = async () => {
+  const response = await api.post('/api/sync/recalculate-analytics');
+  return response.data;
+};
+
+export const getSyncJobs = async (params = {}) => {
+  const response = await api.get('/api/sync/jobs', { params });
+  return response.data;
+};
+
+export const getSyncErrors = async (params = {}) => {
+  const response = await api.get('/api/sync/errors', { params });
+  return response.data;
+};
+
+export const resolveError = async (errorId) => {
+  const response = await api.post(`/api/sync/errors/${errorId}/resolve`);
+  return response.data;
+};
+
+export const getSyncConfig = async () => {
+  const response = await api.get('/api/sync/config');
+  return response.data;
+};
+
+export const updateSyncConfig = async (configKey, configValue) => {
+  const response = await api.post('/api/sync/config', {
+    config_key: configKey,
+    config_value: configValue
+  });
+  return response.data;
+};
+
+export const getApiUsage = async (days = 30) => {
+  const response = await api.get('/api/sync/api-usage', { params: { days } });
+  return response.data;
+};
+
+export const testEmail = async (testEmail = null) => {
+  const response = await api.post('/api/sync/test-email', { test_email: testEmail });
+  return response.data;
+};
+
+export const enableSync = async () => {
+  const response = await api.post('/api/sync/enable');
+  return response.data;
+};
+
+export const disableSync = async () => {
+  const response = await api.post('/api/sync/disable');
   return response.data;
 };
 
