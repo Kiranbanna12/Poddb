@@ -1,7 +1,10 @@
 import time
 import json
 from typing import Optional, List, Dict, Any
-from .db import get_db_connection
+try:
+    from .db import get_db_connection
+except ImportError:
+    from db import get_db_connection
 
 def create_slug(title: str) -> str:
     """Create URL-friendly slug from title"""
