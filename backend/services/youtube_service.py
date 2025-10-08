@@ -54,13 +54,14 @@ class YouTubeService:
         except HttpError as e:
             raise Exception(f"YouTube API Error: {e}")
     
-    def get_playlist_videos(self, playlist_id: str, max_results: Optional[int] = None) -> List[Dict]:
+    def get_playlist_videos(self, playlist_id: str, max_results: Optional[int] = None, start_index: int = 0) -> List[Dict]:
         """
-        Get all videos from a playlist with unlimited pagination support.
+        Get videos from a playlist with pagination support.
         
         Args:
             playlist_id: YouTube playlist ID
             max_results: Maximum number of videos to fetch. If None, fetches ALL videos (unlimited).
+            start_index: Starting index for pagination (0-based)
         
         Returns:
             List of video details
@@ -68,6 +69,7 @@ class YouTubeService:
         videos = []
         next_page_token = None
         page_count = 0
+        videos_skipped = 0
         
         try:
             while True:
@@ -87,23 +89,28 @@ class YouTubeService:
                 
                 # Get detailed video information
                 video_details = self.get_video_details(video_ids)
-                videos.extend(video_details)
+                
+                # Apply start_index filtering
+                for video in video_details:
+                    if videos_skipped < start_index:
+                        videos_skipped += 1
+                        continue
+                    videos.append(video)
+                    
+                    # Stop if we've reached the requested limit
+                    if max_results is not None and len(videos) >= max_results:
+                        print(f"✅ Reached requested limit of {max_results} videos (starting from index {start_index}).")
+                        return videos
                 
                 # Check if we should continue
                 next_page_token = response.get('nextPageToken')
                 
                 # Stop if no more pages
                 if not next_page_token:
-                    print(f"✅ Completed! Fetched all {len(videos)} videos from playlist.")
-                    break
-                
-                # Stop if we've reached the requested limit (only if max_results is specified)
-                if max_results is not None and len(videos) >= max_results:
-                    print(f"✅ Reached requested limit of {max_results} videos.")
+                    print(f"✅ Completed! Fetched {len(videos)} videos from playlist (starting from index {start_index}).")
                     break
             
-            # Return all videos if no limit, or trim to max_results if specified
-            return videos if max_results is None else videos[:max_results]
+            return videos
             
         except HttpError as e:
             raise Exception(f"YouTube API Error: {e}")
