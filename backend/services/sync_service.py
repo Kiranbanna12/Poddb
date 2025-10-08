@@ -218,16 +218,128 @@ class SyncService:
             job_id = self._create_sync_job('new_episodes_check')
             self._update_sync_job(job_id, 'running', started_at=int(time.time()))
             
-            # Implementation similar to run_full_sync but only checking for new episodes
-            # ... (shortened for brevity)
+            logger.info(f"Starting new episodes check (Job ID: {job_id})")
             
-            self._update_sync_job(job_id, 'completed')
+            # Get all approved podcasts with YouTube playlist IDs
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, title 
+                FROM podcasts 
+                WHERE status = 'approved' AND youtube_playlist_id IS NOT NULL AND youtube_playlist_id != ''
+            """)
+            podcasts = cursor.fetchall()
+            conn.close()
             
-            return {"success": True, "message": "New episodes check completed", "job_id": job_id}
+            total_podcasts = len(podcasts)
+            logger.info(f"Checking {total_podcasts} podcasts for new episodes")
+            
+            # Process podcasts
+            items_processed = 0
+            items_updated = 0
+            items_failed = 0
+            new_episodes_found = 0
+            all_new_episodes = []
+            
+            for podcast_id, podcast_title in podcasts:
+                # Check API quota before each podcast
+                quota_check = youtube_sync_service.check_api_quota()
+                if not quota_check["can_continue"]:
+                    logger.warning("API quota limit reached, pausing check")
+                    self._update_sync_job(job_id, 'paused', 
+                                        items_processed=items_processed,
+                                        items_updated=items_updated,
+                                        items_failed=items_failed,
+                                        new_episodes_found=new_episodes_found,
+                                        error_message="API quota limit reached (90%)")
+                    
+                    # Send quota warning email
+                    email_service.send_api_quota_warning(
+                        quota_check["quota_used"],
+                        quota_check["quota_limit"]
+                    )
+                    
+                    return {
+                        "success": False,
+                        "message": "Check paused due to API quota limit",
+                        "job_id": job_id,
+                        "stats": {
+                            "items_processed": items_processed,
+                            "items_updated": items_updated,
+                            "items_failed": items_failed,
+                            "new_episodes_found": new_episodes_found
+                        }
+                    }
+                
+                # Sync podcast (this will fetch all episodes including new ones)
+                try:
+                    logger.info(f"Checking podcast: {podcast_title} (ID: {podcast_id})")
+                    result = youtube_sync_service.sync_podcast_from_youtube(podcast_id, job_id)
+                    
+                    items_processed += 1
+                    
+                    if result["success"]:
+                        items_updated += 1
+                        new_episodes_found += result["new_episodes_added"]
+                        
+                        # Track new episodes for notification
+                        if result["new_episodes_added"] > 0:
+                            all_new_episodes.append({
+                                "podcast_id": podcast_id,
+                                "podcast_title": podcast_title,
+                                "count": result["new_episodes_added"]
+                            })
+                            logger.info(f"Found {result['new_episodes_added']} new episodes for {podcast_title}")
+                    else:
+                        items_failed += 1
+                        logger.error(f"Failed to check {podcast_title}: {result['errors']}")
+                
+                except Exception as e:
+                    items_processed += 1
+                    items_failed += 1
+                    logger.error(f"Exception checking {podcast_title}: {e}")
+                
+                # Small delay to avoid overwhelming API
+                time.sleep(0.5)
+            
+            # Complete job
+            completed_at = int(time.time())
+            duration = completed_at - self._get_job_start_time(job_id)
+            
+            self._update_sync_job(
+                job_id, 'completed',
+                completed_at=completed_at,
+                duration_seconds=duration,
+                items_processed=items_processed,
+                items_updated=items_updated,
+                items_failed=items_failed,
+                new_episodes_found=new_episodes_found
+            )
+            
+            logger.info(f"New episodes check completed (Job ID: {job_id}): {new_episodes_found} new episodes found")
+            
+            # Send notifications
+            if new_episodes_found > 0:
+                self._send_new_episodes_notification(all_new_episodes)
+            
+            return {
+                "success": True,
+                "message": f"Check completed: {new_episodes_found} new episodes found",
+                "job_id": job_id,
+                "stats": {
+                    "items_processed": items_processed,
+                    "items_updated": items_updated,
+                    "items_failed": items_failed,
+                    "new_episodes_found": new_episodes_found,
+                    "duration_seconds": duration
+                }
+            }
         
         except Exception as e:
             logger.error(f"Error checking new episodes: {e}")
-            return {"success": False, "message": str(e)}
+            if job_id:
+                self._update_sync_job(job_id, 'failed', error_message=str(e))
+            return {"success": False, "message": str(e), "job_id": job_id if 'job_id' in locals() else None}
     
     def get_sync_status(self) -> dict:
         """Get current sync status"""
