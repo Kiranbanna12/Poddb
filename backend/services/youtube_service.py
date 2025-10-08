@@ -1,10 +1,16 @@
 """YouTube API Integration Service"""
 import os
+from dotenv import load_dotenv
+from pathlib import Path
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import isodate
 from typing import Dict, List, Optional
 from datetime import datetime
+
+# Load environment variables
+ROOT_DIR = Path(__file__).parent.parent
+load_dotenv(ROOT_DIR / '.env')
 
 
 class YouTubeService:
