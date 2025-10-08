@@ -319,12 +319,18 @@ const ContributionForm = ({ initialData = {}, mode = 'manual' }) => {
 
         <SmartSearchCombobox
           label="Location"
-          placeholder="Search location"
+          placeholder="Search or add location"
           onSearch={handleLocationSearch}
+          onAddNew={handleAddNewLocation}
           onSelect={handleLocationSelect}
-          value={formData.location ? [{ id: 1, name: formData.location }] : []}
+          value={formData.location ? [{ id: 1, name: `${formData.location}${formData.state ? ', ' + formData.state : ''}${formData.country ? ', ' + formData.country : ''}` }] : []}
           multiSelect={false}
           displayKey="name"
+          addNewFields={[
+            { name: 'location', label: 'City/Location', type: 'text', placeholder: 'e.g., Mumbai' },
+            { name: 'state', label: 'State', type: 'text', placeholder: 'e.g., Maharashtra' },
+            { name: 'country', label: 'Country', type: 'text', placeholder: 'e.g., India' }
+          ]}
         />
       </div>
     </Card>
