@@ -119,6 +119,7 @@ def init_database():
             avatar_path TEXT,
             bio TEXT,
             role TEXT DEFAULT 'user',
+            is_admin INTEGER DEFAULT 0,
             contribution_count INTEGER DEFAULT 0,
             review_count INTEGER DEFAULT 0,
             is_active INTEGER DEFAULT 1,
