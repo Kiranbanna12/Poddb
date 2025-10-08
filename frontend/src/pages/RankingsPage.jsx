@@ -1,16 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, TrendingUp, TrendingDown, Minus, Filter } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { mockPodcasts, mockCategories } from '../mock';
+import { getRankings, getCategories, getLanguages } from '../services/api';
 
 const RankingsPage = () => {
   const [activeTab, setActiveTab] = useState('overall');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedLanguage, setSelectedLanguage] = useState('all');
+  const [rankedPodcasts, setRankedPodcasts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [languages, setLanguages] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
+    loadRankings();
+  }, [activeTab, selectedCategory, selectedLanguage]);
+
+  const loadInitialData = async () => {
+    try {
+      const [categoriesData, languagesData] = await Promise.all([
+        getCategories(),
+        getLanguages()
+      ]);
+      setCategories(categoriesData);
+      setLanguages(languagesData);
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+    }
+  };
+
+  const loadRankings = async () => {
+    try {
+      setLoading(true);
+      const filters = { limit: 20 };
+      if (selectedCategory !== 'all') filters.category = selectedCategory;
+      if (selectedLanguage !== 'all') filters.language = selectedLanguage;
+      
+      const data = await getRankings(activeTab, filters);
+      setRankedPodcasts(data);
+    } catch (error) {
+      console.error('Error loading rankings:', error);
+      setRankedPodcasts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatNumber = (num) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
