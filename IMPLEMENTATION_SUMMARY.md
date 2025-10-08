@@ -98,7 +98,7 @@ All frontend and backend components have been successfully implemented and linke
 - `google-auth-oauthlib>=1.2.0`
 
 ### Configuration
-- **Backend URL**: `https://podcastify-10.preview.emergentagent.com/api`
+- **Backend URL**: `https://userhub-2.preview.emergentagent.com/api`
 - **YouTube API Key**: Configured in `/app/backend/.env`
 - **Cloudinary**: Configured in `/app/backend/.env`
 
@@ -217,9 +217,9 @@ All frontend and backend components have been successfully implemented and linke
 
 ## 🚀 How to Access
 
-1. **Frontend**: https://podcastify-10.preview.emergentagent.com
-2. **Contribution Page**: https://podcastify-10.preview.emergentagent.com/contribute
-3. **Backend API**: https://podcastify-10.preview.emergentagent.com/api
+1. **Frontend**: https://userhub-2.preview.emergentagent.com
+2. **Contribution Page**: https://userhub-2.preview.emergentagent.com/contribute
+3. **Backend API**: https://userhub-2.preview.emergentagent.com/api
 
 ---
 
