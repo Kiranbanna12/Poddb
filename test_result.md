@@ -175,15 +175,18 @@ backend:
 
   - task: "API endpoints for YouTube integration"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Added /api/youtube/fetch-playlist and /api/youtube/fetch-video endpoints with Cloudinary thumbnail uploads"
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL: Endpoints implemented correctly but fail due to YouTube Data API v3 not being enabled in Google Cloud project. Both /api/youtube/fetch-playlist and /api/youtube/fetch-video return 403 accessNotConfigured errors."
 
   - task: "API endpoints for smart search"
     implemented: true
