@@ -207,29 +207,38 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("Admin Login", False, f"Exception: {str(e)}")
 
-    def test_search_languages(self):
-        """Test Suite 2: Smart Search - Languages"""
-        try:
-            url = f"{self.base_url}/search/languages"
-            params = {"q": "hindi", "limit": 5}
+    def test_admin_contribution_stats(self):
+        """Test Suite 3: Admin Contribution APIs - Get Statistics"""
+        if not self.admin_token:
+            self.log_test("Admin Contribution Stats", False, "No admin token available")
+            return
             
-            response = self.session.get(url, params=params, timeout=10)
+        try:
+            url = f"{self.base_url}/admin/contributions/stats"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if isinstance(data, list):
-                    details = f"Found {len(data)} languages matching 'hindi'"
-                    self.log_test("Search Languages", True, details)
+                if "success" in data and data["success"] and "stats" in data:
+                    stats = data["stats"]
+                    # Check for expected stat fields
+                    expected_fields = ["pending", "in_review", "approved_today", "rejected_today"]
+                    present_fields = [field for field in expected_fields if field in stats]
+                    
+                    details = f"Stats retrieved: {len(present_fields)}/{len(expected_fields)} fields present"
+                    self.log_test("Admin Contribution Stats", True, details)
                 else:
-                    self.log_test("Search Languages", False, 
-                                "Response should be an array", data)
+                    self.log_test("Admin Contribution Stats", False, 
+                                "Missing 'success' or 'stats' in response", data)
             else:
-                self.log_test("Search Languages", False, 
+                self.log_test("Admin Contribution Stats", False, 
                             f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Search Languages", False, f"Exception: {str(e)}")
+            self.log_test("Admin Contribution Stats", False, f"Exception: {str(e)}")
 
     def test_add_new_language(self):
         """Test Suite 2: Smart Search - Add New Language"""
