@@ -130,15 +130,18 @@ backend:
 
   - task: "YouTube API service integration"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/backend/services/youtube_service.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Created YouTube service with playlist/video fetching, duration parsing, thumbnail extraction using google-api-python-client library"
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL: YouTube Data API v3 is not enabled in Google Cloud project 328499567147. API returns 403 accessNotConfigured error. Service implementation is correct but requires API enablement in Google Cloud Console."
 
   - task: "Cloudinary image upload service"
     implemented: true
