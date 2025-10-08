@@ -19,7 +19,7 @@ from ..services.email_service import (
     send_content_updated_email
 )
 
-router = APIRouter(prefix="/api/admin", tags=["Admin"])
+router = APIRouter(prefix="/admin", tags=["Admin Content Management"])
 
 # ============================================
 # PYDANTIC MODELS
