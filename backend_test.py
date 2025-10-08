@@ -10,7 +10,7 @@ import sys
 from typing import Dict, Any, Optional
 
 # Backend URL from frontend .env
-BASE_URL = "https://moderator-hub-4.preview.emergentagent.com/api"
+BASE_URL = "https://account-manager-47.preview.emergentagent.com/api"
 
 class AdminPanelTester:
     def __init__(self):

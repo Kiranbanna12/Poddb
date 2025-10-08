@@ -98,7 +98,7 @@ All frontend and backend components have been successfully implemented and linke
 - `google-auth-oauthlib>=1.2.0`
 
 ### Configuration
-- **Backend URL**: `https://moderator-hub-4.preview.emergentagent.com/api`
+- **Backend URL**: `https://account-manager-47.preview.emergentagent.com/api`
 - **YouTube API Key**: Configured in `/app/backend/.env`
 - **Cloudinary**: Configured in `/app/backend/.env`
 
@@ -217,9 +217,9 @@ All frontend and backend components have been successfully implemented and linke
 
 ## 🚀 How to Access
 
-1. **Frontend**: https://moderator-hub-4.preview.emergentagent.com
-2. **Contribution Page**: https://moderator-hub-4.preview.emergentagent.com/contribute
-3. **Backend API**: https://moderator-hub-4.preview.emergentagent.com/api
+1. **Frontend**: https://account-manager-47.preview.emergentagent.com
+2. **Contribution Page**: https://account-manager-47.preview.emergentagent.com/contribute
+3. **Backend API**: https://account-manager-47.preview.emergentagent.com/api
 
 ---
 
