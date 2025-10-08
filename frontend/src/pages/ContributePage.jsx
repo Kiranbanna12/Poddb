@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Upload, Plus, Trash2, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -6,10 +6,29 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
-import { useToast } from '../hooks/use-toast';
+import { toast } from 'sonner';
+import { createContribution, getCategories, getLanguages } from '../services/api';
 
 const ContributePage = () => {
-  const { toast } = useToast();
+  const [availableCategories, setAvailableCategories] = useState([]);
+  const [availableLanguages, setAvailableLanguages] = useState([]);
+  
+  useEffect(() => {
+    loadOptions();
+  }, []);
+
+  const loadOptions = async () => {
+    try {
+      const [categoriesData, languagesData] = await Promise.all([
+        getCategories(),
+        getLanguages()
+      ]);
+      setAvailableCategories(categoriesData.map(c => c.name));
+      setAvailableLanguages(languagesData.map(l => l.name));
+    } catch (error) {
+      console.error('Error loading options:', error);
+    }
+  };
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
