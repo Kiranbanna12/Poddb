@@ -113,9 +113,23 @@ export const getUserContributions = async () => {
 };
 
 // YouTube API Integration
-export const fetchYouTubePlaylist = async (playlistUrl) => {
-  const response = await api.post('/youtube/fetch-playlist', { playlist_url: playlistUrl });
+export const fetchYouTubePlaylist = async (playlistUrl, maxResults = null, startIndex = 0) => {
+  const response = await api.post('/youtube/fetch-playlist', { 
+    playlist_url: playlistUrl,
+    max_results: maxResults,
+    start_index: startIndex
+  });
   return response.data;
+};
+
+export const fetchYouTubePlaylistInitial = async (playlistUrl) => {
+  // Fetch first 10 episodes only
+  return fetchYouTubePlaylist(playlistUrl, 10, 0);
+};
+
+export const fetchYouTubePlaylistBatch = async (playlistUrl, startIndex, batchSize = 20) => {
+  // Fetch a batch of episodes starting from startIndex
+  return fetchYouTubePlaylist(playlistUrl, batchSize, startIndex);
 };
 
 export const fetchYouTubeVideo = async (videoUrl) => {
