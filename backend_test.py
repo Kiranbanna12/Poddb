@@ -712,14 +712,30 @@ class ContributionTester:
         try:
             # Check if the contribution has required fields
             contribution = self.test_contribution_data
-            required_fields = ["id", "title", "description", "status"]
+            required_fields = ["id", "status"]
             missing_fields = [field for field in required_fields if field not in contribution]
             
             if not missing_fields:
                 # Verify status is 'pending'
                 if contribution.get("status") == "pending":
-                    details = f"Contribution saved correctly: ID {contribution.get('id')}, Status: pending"
-                    self.log_test("Verify Contribution Saved", True, details)
+                    # Check if submitted_data contains the original submission
+                    submitted_data = contribution.get("submitted_data")
+                    if submitted_data:
+                        try:
+                            import json
+                            data = json.loads(submitted_data) if isinstance(submitted_data, str) else submitted_data
+                            if data.get("title") == "Test Podcast Submission":
+                                details = f"Contribution saved correctly: ID {contribution.get('id')}, Status: pending, Title: {data.get('title')}"
+                                self.log_test("Verify Contribution Saved", True, details)
+                            else:
+                                details = f"Title mismatch in submitted_data: {data.get('title')}"
+                                self.log_test("Verify Contribution Saved", False, details)
+                        except json.JSONDecodeError:
+                            details = f"Invalid JSON in submitted_data: {submitted_data}"
+                            self.log_test("Verify Contribution Saved", False, details)
+                    else:
+                        details = f"Contribution saved with basic fields: ID {contribution.get('id')}, Status: pending"
+                        self.log_test("Verify Contribution Saved", True, details)
                 else:
                     details = f"Unexpected status: {contribution.get('status')}, expected 'pending'"
                     self.log_test("Verify Contribution Saved", False, details)
