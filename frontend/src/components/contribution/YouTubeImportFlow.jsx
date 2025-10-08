@@ -207,17 +207,62 @@ const YouTubeImportFlow = () => {
   // Step 3: Form with fetched data
   if (step === 'form' && fetchedData) {
     return (
-      <ContributionForm 
-        initialData={{
-          title: fetchedData.playlist.title,
-          description: fetchedData.playlist.description,
-          coverImage: fetchedData.playlist.cover_image_cloudinary,
-          youtubePlaylistUrl: playlistUrl,
-          channelName: fetchedData.playlist.channel_name,
-          episodes: fetchedData.episodes
-        }}
-        mode="youtube"
-      />
+      <div>
+        {/* Background Loading Status */}
+        {isBackgroundFetching && (
+          <Card className="bg-[#1F1F1F] border-[#5799EF] p-4 mb-6 max-w-5xl mx-auto">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Download className="w-5 h-5 text-[#5799EF] animate-pulse" />
+                <div>
+                  <p className="text-white font-medium">Loading episodes in background...</p>
+                  <p className="text-sm text-gray-400">
+                    {loadedEpisodes} of {totalEpisodes} episodes loaded
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-[#5799EF] font-bold text-lg">
+                    {Math.round((loadedEpisodes / totalEpisodes) * 100)}%
+                  </p>
+                </div>
+                <Loader2 className="w-5 h-5 text-[#5799EF] animate-spin" />
+              </div>
+            </div>
+            <div className="mt-3 bg-[#2A2A2A] rounded-full h-2 overflow-hidden">
+              <div 
+                className="bg-[#5799EF] h-full transition-all duration-500"
+                style={{ width: `${(loadedEpisodes / totalEpisodes) * 100}%` }}
+              />
+            </div>
+          </Card>
+        )}
+        
+        {/* Success Status */}
+        {!isBackgroundFetching && totalEpisodes > 10 && (
+          <Card className="bg-green-900/20 border-green-600 p-4 mb-6 max-w-5xl mx-auto">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <p className="text-green-300">
+                All {totalEpisodes} episodes loaded successfully! You can now fill the form.
+              </p>
+            </div>
+          </Card>
+        )}
+        
+        <ContributionForm 
+          initialData={{
+            title: fetchedData.playlist.title,
+            description: fetchedData.playlist.description,
+            coverImage: fetchedData.playlist.cover_image_cloudinary,
+            youtubePlaylistUrl: playlistUrl,
+            channelName: fetchedData.playlist.channel_name,
+            episodes: fetchedData.episodes
+          }}
+          mode="youtube"
+        />
+      </div>
     );
   }
 
