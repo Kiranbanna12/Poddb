@@ -153,8 +153,13 @@ const RankingsPage = () => {
           </TabsList>
 
           <TabsContent value={activeTab}>
-            <div className="space-y-4">
-              {filteredPodcasts.map((podcast) => (
+            {loading ? (
+              <div className="text-center py-16">
+                <p className="text-white text-lg">Loading rankings...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredPodcasts.map((podcast) => (
                 <Card 
                   key={podcast.id} 
                   className="bg-[#1F1F1F] border-[#2A2A2A] hover:border-[#5799EF] transition-all duration-300 cursor-pointer"
