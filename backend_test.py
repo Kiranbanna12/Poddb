@@ -1021,7 +1021,391 @@ class ContributionTester:
         # Summary
         self.print_summary()
 
+    def test_sync_system_endpoints(self):
+        """Test the complete automated sync system backend APIs"""
+        print("🎯 AUTOMATED SYNC SYSTEM TESTING")
+        print("-" * 50)
+        
+        # Step 1: Create admin user and login
+        self.test_create_admin_user()
+        
+        # Step 2: Test all sync endpoints
+        self.test_sync_dashboard()
+        self.test_sync_status()
+        self.test_sync_config_get()
+        self.test_sync_enable()
+        self.test_sync_jobs()
+        self.test_sync_errors()
+        self.test_sync_api_usage()
+        self.test_sync_config_update()
+
+    def test_create_admin_user(self):
+        """Create an admin user for testing sync endpoints"""
+        try:
+            # First try to register admin user
+            url = f"{self.base_url}/auth/register"
+            payload = {
+                "username": "syncadmin",
+                "email": "syncadmin@poddb.com",
+                "password": "AdminSync123!",
+                "full_name": "Sync Admin User"
+            }
+            
+            response = self.session.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                user_id = data["user"]["id"]
+                
+                # Set user as admin in database
+                import sqlite3
+                try:
+                    conn = sqlite3.connect('/app/backend/database.db')
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (user_id,))
+                    conn.commit()
+                    conn.close()
+                    
+                    # Now login to get admin token
+                    self.test_admin_login_for_sync()
+                    
+                except Exception as db_error:
+                    self.log_test("Create Admin User", False, f"Database error: {db_error}")
+                    
+            elif response.status_code == 400:
+                # User exists, try to login
+                self.test_admin_login_for_sync()
+            else:
+                self.log_test("Create Admin User", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Create Admin User", False, f"Exception: {str(e)}")
+
+    def test_admin_login_for_sync(self):
+        """Login admin user for sync testing"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            payload = {
+                "identifier": "syncadmin@poddb.com",
+                "password": "AdminSync123!"
+            }
+            
+            response = self.session.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "token" in data:
+                    self.admin_token = data["token"]
+                    self.log_test("Admin Login for Sync", True, "Admin logged in successfully")
+                else:
+                    self.log_test("Admin Login for Sync", False, "No token in response", data)
+            else:
+                self.log_test("Admin Login for Sync", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Admin Login for Sync", False, f"Exception: {str(e)}")
+
+    def test_sync_dashboard(self):
+        """Test GET /api/sync/dashboard"""
+        if not self.admin_token:
+            self.log_test("Sync Dashboard", False, "No admin token available")
+            return
+            
+        try:
+            url = f"{self.base_url}/sync/dashboard"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check required fields
+                required_fields = ["success", "current_status", "last_sync", "today_stats", "api_usage"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    current_status = data["current_status"]
+                    today_stats = data["today_stats"]
+                    api_usage = data["api_usage"]
+                    
+                    details = f"Dashboard data: Status={current_status.get('is_running', 'unknown')}, Podcasts synced today={today_stats.get('podcasts_synced', 0)}, API usage={api_usage.get('percentage', 0):.1f}%"
+                    self.log_test("Sync Dashboard", True, details)
+                else:
+                    self.log_test("Sync Dashboard", False, f"Missing fields: {missing_fields}", data)
+            else:
+                self.log_test("Sync Dashboard", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Dashboard", False, f"Exception: {str(e)}")
+
+    def test_sync_status(self):
+        """Test GET /api/sync/status"""
+        if not self.admin_token:
+            self.log_test("Sync Status", False, "No admin token available")
+            return
+            
+        try:
+            url = f"{self.base_url}/sync/status"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and "sync_status" in data and "scheduler_jobs" in data:
+                    sync_status = data["sync_status"]
+                    scheduler_jobs = data["scheduler_jobs"]
+                    
+                    details = f"Sync running: {sync_status.get('is_running', False)}, Scheduler jobs: {len(scheduler_jobs)}"
+                    self.log_test("Sync Status", True, details)
+                else:
+                    self.log_test("Sync Status", False, "Missing required fields", data)
+            else:
+                self.log_test("Sync Status", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Status", False, f"Exception: {str(e)}")
+
+    def test_sync_config_get(self):
+        """Test GET /api/sync/config"""
+        if not self.admin_token:
+            self.log_test("Sync Config Get", False, "No admin token available")
+            return
+            
+        try:
+            url = f"{self.base_url}/sync/config"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and "config" in data:
+                    config = data["config"]
+                    config_keys = list(config.keys())
+                    
+                    details = f"Config retrieved: {len(config_keys)} settings"
+                    self.log_test("Sync Config Get", True, details)
+                    
+                    # Store config for later tests
+                    self.sync_config = config
+                else:
+                    self.log_test("Sync Config Get", False, "Missing success or config fields", data)
+            else:
+                self.log_test("Sync Config Get", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Config Get", False, f"Exception: {str(e)}")
+
+    def test_sync_enable(self):
+        """Test POST /api/sync/enable"""
+        if not self.admin_token:
+            self.log_test("Sync Enable", False, "No admin token available")
+            return
+            
+        try:
+            url = f"{self.base_url}/sync/enable"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            response = self.session.post(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and data["success"]:
+                    details = f"Sync enabled: {data.get('message', 'Success')}"
+                    self.log_test("Sync Enable", True, details)
+                else:
+                    self.log_test("Sync Enable", False, "Success field missing or false", data)
+            else:
+                self.log_test("Sync Enable", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Enable", False, f"Exception: {str(e)}")
+
+    def test_sync_jobs(self):
+        """Test GET /api/sync/jobs"""
+        if not self.admin_token:
+            self.log_test("Sync Jobs", False, "No admin token available")
+            return
+            
+        try:
+            url = f"{self.base_url}/sync/jobs"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            params = {"limit": 10}
+            
+            response = self.session.get(url, headers=headers, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and "jobs" in data and "total" in data:
+                    jobs = data["jobs"]
+                    total = data["total"]
+                    
+                    details = f"Jobs retrieved: {len(jobs)} jobs, Total: {total}"
+                    self.log_test("Sync Jobs", True, details)
+                else:
+                    self.log_test("Sync Jobs", False, "Missing required fields", data)
+            else:
+                self.log_test("Sync Jobs", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Jobs", False, f"Exception: {str(e)}")
+
+    def test_sync_errors(self):
+        """Test GET /api/sync/errors"""
+        if not self.admin_token:
+            self.log_test("Sync Errors", False, "No admin token available")
+            return
+            
+        try:
+            url = f"{self.base_url}/sync/errors"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            params = {"limit": 10}
+            
+            response = self.session.get(url, headers=headers, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and "errors" in data:
+                    errors = data["errors"]
+                    
+                    details = f"Errors retrieved: {len(errors)} errors"
+                    self.log_test("Sync Errors", True, details)
+                else:
+                    self.log_test("Sync Errors", False, "Missing required fields", data)
+            else:
+                self.log_test("Sync Errors", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Errors", False, f"Exception: {str(e)}")
+
+    def test_sync_api_usage(self):
+        """Test GET /api/sync/api-usage"""
+        if not self.admin_token:
+            self.log_test("Sync API Usage", False, "No admin token available")
+            return
+            
+        try:
+            url = f"{self.base_url}/sync/api-usage"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            params = {"days": 7}
+            
+            response = self.session.get(url, headers=headers, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and "usage" in data:
+                    usage = data["usage"]
+                    
+                    details = f"API usage retrieved: {len(usage)} days of data"
+                    self.log_test("Sync API Usage", True, details)
+                else:
+                    self.log_test("Sync API Usage", False, "Missing required fields", data)
+            else:
+                self.log_test("Sync API Usage", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync API Usage", False, f"Exception: {str(e)}")
+
+    def test_sync_config_update(self):
+        """Test POST /api/sync/config"""
+        if not self.admin_token:
+            self.log_test("Sync Config Update", False, "No admin token available")
+            return
+            
+        try:
+            url = f"{self.base_url}/sync/config"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            payload = {
+                "config_key": "sync_batch_size",
+                "config_value": "25"
+            }
+            
+            response = self.session.post(url, json=payload, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and data["success"]:
+                    details = f"Config updated: {data.get('message', 'Success')}"
+                    self.log_test("Sync Config Update", True, details)
+                else:
+                    self.log_test("Sync Config Update", False, "Success field missing or false", data)
+            else:
+                self.log_test("Sync Config Update", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Sync Config Update", False, f"Exception: {str(e)}")
+
+    def test_sync_authentication(self):
+        """Test sync endpoints authentication"""
+        print("🔐 SYNC AUTHENTICATION TESTING")
+        print("-" * 50)
+        
+        # Test without token
+        self.test_sync_no_auth()
+        
+        # Test with regular user token
+        if self.regular_user_token:
+            self.test_sync_regular_user_auth()
+
+    def test_sync_no_auth(self):
+        """Test sync endpoints without authentication"""
+        try:
+            url = f"{self.base_url}/sync/dashboard"
+            # No Authorization header
+            
+            response = self.session.get(url, timeout=10)
+            
+            if response.status_code == 401:
+                self.log_test("Sync No Auth", True, "Correctly returned 401 Unauthorized")
+            else:
+                self.log_test("Sync No Auth", False, f"Expected 401, got HTTP {response.status_code}")
+                
+        except Exception as e:
+            self.log_test("Sync No Auth", False, f"Exception: {str(e)}")
+
+    def test_sync_regular_user_auth(self):
+        """Test sync endpoints with regular user token"""
+        try:
+            url = f"{self.base_url}/sync/dashboard"
+            headers = {"Authorization": f"Bearer {self.regular_user_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 403:
+                self.log_test("Sync Regular User Auth", True, "Correctly returned 403 Forbidden")
+            else:
+                self.log_test("Sync Regular User Auth", False, f"Expected 403, got HTTP {response.status_code}")
+                
+        except Exception as e:
+            self.log_test("Sync Regular User Auth", False, f"Exception: {str(e)}")
+
+    def run_sync_system_tests(self):
+        """Run the complete sync system tests"""
+        print("=" * 80)
+        print("BACKEND API TESTING SUITE - AUTOMATED SYNC SYSTEM")
+        print("=" * 80)
+        print(f"Testing against: {self.base_url}")
+        print()
+        
+        # Run sync system tests
+        self.test_sync_system_endpoints()
+        
+        # Run authentication tests
+        self.test_sync_authentication()
+        
+        # Summary
+        self.print_summary()
+
 if __name__ == "__main__":
     tester = ContributionTester()
-    # Run the specific YouTube pagination tests as requested
-    tester.run_youtube_pagination_tests()
+    # Run the sync system tests as requested
+    tester.run_sync_system_tests()
