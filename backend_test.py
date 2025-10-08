@@ -835,6 +835,193 @@ class ContributionTester:
         
         return passed, failed
 
+    def test_youtube_playlist_pagination(self):
+        """Test YouTube playlist fetching API with pagination support"""
+        print("🎯 YOUTUBE PLAYLIST PAGINATION TEST")
+        print("-" * 50)
+        
+        # Test playlist URL from the review request
+        playlist_url = "https://www.youtube.com/playlist?list=PLillGF-RfqbbnEGy3ROiLWk7JMCuSyQtX"
+        
+        # Test Case 1: Initial Fetch (First 10 episodes)
+        self.test_initial_fetch_10_episodes(playlist_url)
+        
+        # Test Case 2: Batch Fetch (Next 20 episodes)
+        self.test_batch_fetch_next_20_episodes(playlist_url)
+        
+        # Test Case 3: Full Fetch (All episodes - backward compatibility)
+        self.test_full_fetch_all_episodes(playlist_url)
+
+    def test_initial_fetch_10_episodes(self, playlist_url):
+        """Test Case 1: Initial Fetch (First 10 episodes)"""
+        try:
+            url = f"{self.base_url}/youtube/fetch-playlist"
+            payload = {
+                "playlist_url": playlist_url,
+                "max_results": 10,
+                "start_index": 0
+            }
+            
+            response = self.session.post(url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Verify required response structure
+                required_fields = ["episodes", "fetched_count", "start_index"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    episodes = data.get("episodes", [])
+                    fetched_count = data.get("fetched_count", 0)
+                    start_index = data.get("start_index", -1)
+                    
+                    # Verify initial fetch includes playlist details
+                    if "playlist" in data and "total_episodes" in data:
+                        playlist_details = data["playlist"]
+                        total_episodes = data["total_episodes"]
+                        
+                        # Verify we got the expected number of episodes
+                        if len(episodes) == 10 and fetched_count == 10 and start_index == 0:
+                            # Check if Cloudinary thumbnails are working
+                            cloudinary_count = sum(1 for ep in episodes if ep.get("thumbnail_cloudinary"))
+                            
+                            details = f"✅ Initial fetch: {len(episodes)} episodes, playlist: {playlist_details.get('title')}, total: {total_episodes}, Cloudinary: {cloudinary_count}/{len(episodes)}"
+                            self.log_test("Initial Fetch (10 episodes)", True, details)
+                            
+                            # Store for next test
+                            self.playlist_total_episodes = total_episodes
+                        else:
+                            details = f"Expected 10 episodes, got {len(episodes)}. fetched_count: {fetched_count}, start_index: {start_index}"
+                            self.log_test("Initial Fetch (10 episodes)", False, details)
+                    else:
+                        details = "Missing 'playlist' or 'total_episodes' in initial fetch response"
+                        self.log_test("Initial Fetch (10 episodes)", False, details, data)
+                else:
+                    details = f"Missing required fields: {missing_fields}"
+                    self.log_test("Initial Fetch (10 episodes)", False, details, data)
+            else:
+                self.log_test("Initial Fetch (10 episodes)", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Initial Fetch (10 episodes)", False, f"Exception: {str(e)}")
+
+    def test_batch_fetch_next_20_episodes(self, playlist_url):
+        """Test Case 2: Batch Fetch (Next 20 episodes)"""
+        try:
+            url = f"{self.base_url}/youtube/fetch-playlist"
+            payload = {
+                "playlist_url": playlist_url,
+                "max_results": 20,
+                "start_index": 10
+            }
+            
+            response = self.session.post(url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Verify required response structure
+                required_fields = ["episodes", "fetched_count", "start_index"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    episodes = data.get("episodes", [])
+                    fetched_count = data.get("fetched_count", 0)
+                    start_index = data.get("start_index", -1)
+                    
+                    # Verify subsequent fetch does NOT include playlist details
+                    if "playlist" not in data and "total_episodes" not in data:
+                        # Verify we got episodes (up to 20, depending on playlist size)
+                        if len(episodes) > 0 and fetched_count == len(episodes) and start_index == 10:
+                            # Check if Cloudinary thumbnails are working
+                            cloudinary_count = sum(1 for ep in episodes if ep.get("thumbnail_cloudinary"))
+                            
+                            details = f"✅ Batch fetch: {len(episodes)} episodes (start_index=10), Cloudinary: {cloudinary_count}/{len(episodes)}"
+                            self.log_test("Batch Fetch (20 episodes)", True, details)
+                        else:
+                            details = f"Got {len(episodes)} episodes. fetched_count: {fetched_count}, start_index: {start_index}"
+                            self.log_test("Batch Fetch (20 episodes)", False, details)
+                    else:
+                        details = "Subsequent fetch should NOT include 'playlist' or 'total_episodes'"
+                        self.log_test("Batch Fetch (20 episodes)", False, details, data)
+                else:
+                    details = f"Missing required fields: {missing_fields}"
+                    self.log_test("Batch Fetch (20 episodes)", False, details, data)
+            else:
+                self.log_test("Batch Fetch (20 episodes)", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Batch Fetch (20 episodes)", False, f"Exception: {str(e)}")
+
+    def test_full_fetch_all_episodes(self, playlist_url):
+        """Test Case 3: Full Fetch (All episodes - backward compatibility)"""
+        try:
+            url = f"{self.base_url}/youtube/fetch-playlist"
+            payload = {
+                "playlist_url": playlist_url
+                # No max_results or start_index for backward compatibility
+            }
+            
+            response = self.session.post(url, json=payload, timeout=60)  # Longer timeout for full fetch
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Verify required response structure
+                required_fields = ["episodes", "fetched_count", "start_index"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    episodes = data.get("episodes", [])
+                    fetched_count = data.get("fetched_count", 0)
+                    start_index = data.get("start_index", -1)
+                    
+                    # Verify full fetch includes playlist details (like initial fetch)
+                    if "playlist" in data and "total_episodes" in data:
+                        playlist_details = data["playlist"]
+                        total_episodes = data["total_episodes"]
+                        
+                        # Verify we got all episodes
+                        if len(episodes) > 10 and fetched_count == len(episodes) and start_index == 0:
+                            # Check if Cloudinary thumbnails are working
+                            cloudinary_count = sum(1 for ep in episodes if ep.get("thumbnail_cloudinary"))
+                            
+                            details = f"✅ Full fetch: {len(episodes)} episodes, playlist: {playlist_details.get('title')}, total: {total_episodes}, Cloudinary: {cloudinary_count}/{len(episodes)}"
+                            self.log_test("Full Fetch (all episodes)", True, details)
+                        else:
+                            details = f"Got {len(episodes)} episodes. fetched_count: {fetched_count}, start_index: {start_index}"
+                            self.log_test("Full Fetch (all episodes)", False, details)
+                    else:
+                        details = "Full fetch should include 'playlist' and 'total_episodes'"
+                        self.log_test("Full Fetch (all episodes)", False, details, data)
+                else:
+                    details = f"Missing required fields: {missing_fields}"
+                    self.log_test("Full Fetch (all episodes)", False, details, data)
+            else:
+                self.log_test("Full Fetch (all episodes)", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Full Fetch (all episodes)", False, f"Exception: {str(e)}")
+
+    def run_youtube_pagination_tests(self):
+        """Run only the YouTube playlist pagination tests"""
+        print("=" * 80)
+        print("BACKEND API TESTING SUITE - YOUTUBE PLAYLIST PAGINATION")
+        print("=" * 80)
+        print(f"Testing against: {self.base_url}")
+        print()
+        
+        # Run the YouTube playlist pagination tests
+        self.test_youtube_playlist_pagination()
+        
+        # Summary
+        self.print_summary()
+
 if __name__ == "__main__":
     tester = ContributionTester()
-    tester.run_all_tests()
+    # Run the specific YouTube pagination tests as requested
+    tester.run_youtube_pagination_tests()
