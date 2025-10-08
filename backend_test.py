@@ -660,10 +660,20 @@ class BackendTester:
     def run_all_tests(self):
         """Run all test suites"""
         print("=" * 80)
-        print("BACKEND API TESTING SUITE - ADVANCED CONTRIBUTION PAGE")
+        print("BACKEND API TESTING SUITE - CONTRIBUTION FORM FIXES")
         print("=" * 80)
         print(f"Testing against: {self.base_url}")
         print()
+        
+        # Test Suite 5: Contribution Form Fixes (Priority)
+        print("🔧 TEST SUITE 5: Contribution Form Fixes")
+        print("-" * 50)
+        self.test_add_new_location()
+        self.test_add_new_location_minimal()
+        self.test_search_locations()
+        self.test_user_registration_and_login()
+        self.test_contribution_submission_with_auth()
+        self.test_contribution_submission_without_auth()
         
         # Test Suite 1: YouTube API Integration
         print("🎥 TEST SUITE 1: YouTube API Integration")
@@ -678,7 +688,6 @@ class BackendTester:
         self.test_add_new_category()
         self.test_search_languages()
         self.test_add_new_language()
-        self.test_search_locations()
         self.test_search_people()
         
         # Test Suite 3: People/Team Management
