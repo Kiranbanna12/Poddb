@@ -160,15 +160,18 @@ backend:
 
   - task: "Database query functions for advanced features"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/database/queries.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Added queries for people management, episode-guest assignments, episode bulk operations, smart search for categories/languages/locations/people, playlist sync management"
+      - working: true
+        agent: "testing"
+        comment: "Database queries working correctly after schema update. Fixed database schema mismatch - updated people table to use full_name column and episodes table to include season_number column."
 
   - task: "API endpoints for YouTube integration"
     implemented: true
