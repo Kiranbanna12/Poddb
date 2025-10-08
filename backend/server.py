@@ -1,81 +1,40 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
+from pathlib import Path
 import os
 import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
-from datetime import datetime, timezone
+from typing import Optional, List
 
+# Import database queries
+from database import queries
+from database.db import init_database, seed_data
+
+# Import models
+from models.podcast import Podcast, PodcastCreate
+from models.episode import Episode
+from models.user import User, UserCreate, UserLogin
+from models.contribution import Contribution, ContributionCreate
+
+# Import auth
+from auth.password import hash_password, verify_password
+from auth.auth import create_access_token, get_current_user_id
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Initialize database on startup
+try:
+    init_database()
+    seed_data()
+except:
+    pass  # Already initialized
 
-# Create the main app without a prefix
-app = FastAPI()
+# Create the main app
+app = FastAPI(title="PodDB Pro API")
 
-# Create a router with the /api prefix
+# Create API router
 api_router = APIRouter(prefix="/api")
-
-
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
-
-# Include the router in the main app
-app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Configure logging
 logging.basicConfig(
@@ -84,6 +43,300 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Authentication dependency
+async def get_current_user(authorization: Optional[str] = Header(None)) -> Optional[int]:
+    """Get current user from JWT token"""
+    if not authorization:
+        return None
+    
+    try:
+        token = authorization.replace("Bearer ", "")
+        user_id = get_current_user_id(token)
+        return user_id
+    except:
+        return None
+
+# Routes
+
+@api_router.get("/")
+async def root():
+    return {"message": "PodDB Pro API - v1.0"}
+
+# Stats API
+@api_router.get("/stats")
+async def get_stats():
+    """Get platform statistics"""
+    try:
+        stats = queries.get_stats()
+        return stats
+    except Exception as e:
+        logger.error(f"Error getting stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Podcasts API
+@api_router.get("/podcasts")
+async def get_podcasts(
+    category: Optional[str] = None,
+    language: Optional[str] = None,
+    limit: int = 20
+):
+    """Get all podcasts with optional filters"""
+    try:
+        filters = {'limit': limit}
+        if category:
+            filters['category'] = category
+        if language:
+            filters['language'] = language
+        
+        podcasts = queries.get_podcasts(filters)
+        return {"podcasts": podcasts, "total": len(podcasts)}
+    except Exception as e:
+        logger.error(f"Error getting podcasts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/podcasts/top")
+async def get_top_podcasts(limit: int = 8):
+    """Get top rated podcasts"""
+    try:
+        podcasts = queries.get_podcasts({'limit': limit})
+        return podcasts
+    except Exception as e:
+        logger.error(f"Error getting top podcasts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/podcasts/{podcast_id}")
+async def get_podcast(podcast_id: int):
+    """Get single podcast by ID"""
+    try:
+        podcast = queries.get_podcast_by_id(podcast_id)
+        if not podcast:
+            raise HTTPException(status_code=404, detail="Podcast not found")
+        return podcast
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting podcast: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/podcasts")
+async def create_podcast(podcast: PodcastCreate, user_id: Optional[int] = Depends(get_current_user)):
+    """Create a new podcast (requires authentication)"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    try:
+        podcast_dict = podcast.model_dump()
+        new_podcast = queries.create_podcast(podcast_dict, user_id)
+        return new_podcast
+    except Exception as e:
+        logger.error(f"Error creating podcast: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Episodes API
+@api_router.get("/episodes")
+async def get_episodes(limit: int = 8):
+    """Get latest episodes"""
+    try:
+        episodes = queries.get_episodes({'limit': limit})
+        return episodes
+    except Exception as e:
+        logger.error(f"Error getting episodes: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/episodes/{episode_id}")
+async def get_episode(episode_id: int):
+    """Get single episode by ID"""
+    try:
+        episode = queries.get_episode_by_id(episode_id)
+        if not episode:
+            raise HTTPException(status_code=404, detail="Episode not found")
+        return episode
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting episode: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Categories API
+@api_router.get("/categories")
+async def get_categories():
+    """Get all categories"""
+    try:
+        categories = queries.get_all_categories()
+        return categories
+    except Exception as e:
+        logger.error(f"Error getting categories: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Languages API
+@api_router.get("/languages")
+async def get_languages():
+    """Get all languages"""
+    try:
+        languages = queries.get_all_languages()
+        return languages
+    except Exception as e:
+        logger.error(f"Error getting languages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Rankings API
+@api_router.get("/rankings/{ranking_type}")
+async def get_rankings(
+    ranking_type: str,
+    category: Optional[str] = None,
+    language: Optional[str] = None,
+    limit: int = 20
+):
+    """Get rankings (overall/weekly/monthly)"""
+    try:
+        # For MVP, we'll use overall rankings from podcasts table
+        filters = {'limit': limit}
+        if category:
+            filters['category'] = category
+        if language:
+            filters['language'] = language
+        
+        podcasts = queries.get_podcasts(filters)
+        
+        # Add mock rank changes for frontend
+        import random
+        for i, podcast in enumerate(podcasts):
+            podcast['rank'] = i + 1
+            if i == 0:
+                podcast['rankChange'] = 2
+            elif i == 1:
+                podcast['rankChange'] = -1
+            elif i == 2:
+                podcast['rankChange'] = 0
+            else:
+                podcast['rankChange'] = random.randint(-5, 5)
+        
+        return podcasts
+    except Exception as e:
+        logger.error(f"Error getting rankings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Authentication API
+@api_router.post("/auth/register")
+async def register(user: UserCreate):
+    """Register a new user"""
+    try:
+        # Check if user already exists
+        existing_user = queries.get_user_by_email(user.email)
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        # Hash password and create user
+        password_hash = hash_password(user.password)
+        new_user = queries.create_user(user.username, user.email, password_hash)
+        
+        # Remove password_hash from response
+        new_user.pop('password_hash', None)
+        
+        # Create JWT token
+        token = create_access_token({"user_id": new_user['id'], "email": new_user['email']})
+        
+        return {
+            "user": new_user,
+            "token": token
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error registering user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/auth/login")
+async def login(credentials: UserLogin):
+    """User login"""
+    try:
+        # Get user by email
+        user = queries.get_user_by_email(credentials.email)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Verify password
+        if not verify_password(credentials.password, user['password_hash']):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Remove password_hash from response
+        user.pop('password_hash', None)
+        
+        # Create JWT token
+        token = create_access_token({"user_id": user['id'], "email": user['email']})
+        
+        return {
+            "user": user,
+            "token": token
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error logging in: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/auth/me")
+async def get_current_user_info(user_id: Optional[int] = Depends(get_current_user)):
+    """Get current user info"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        user = queries.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user.pop('password_hash', None)
+        return user
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting user info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Contributions API
+@api_router.post("/contributions")
+async def create_contribution(
+    contribution: ContributionCreate,
+    user_id: Optional[int] = Depends(get_current_user)
+):
+    """Submit a podcast contribution"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    try:
+        contribution_dict = contribution.model_dump()
+        new_contribution = queries.create_contribution(user_id, contribution_dict)
+        return new_contribution
+    except Exception as e:
+        logger.error(f"Error creating contribution: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/contributions")
+async def get_user_contributions(user_id: Optional[int] = Depends(get_current_user)):
+    """Get user's contributions"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    try:
+        contributions = queries.get_user_contributions(user_id)
+        return contributions
+    except Exception as e:
+        logger.error(f"Error getting contributions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Include router
+app.include_router(api_router)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+async def shutdown():
+    logger.info("Application shutting down")
