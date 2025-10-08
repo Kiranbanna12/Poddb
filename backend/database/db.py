@@ -330,6 +330,16 @@ def init_database():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_episode_guests_person ON episode_guests(person_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_contributions_user ON contributions(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_contributions_status ON contributions(status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_contributions_type ON contributions(contribution_type)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_contributions_created ON contributions(created_at DESC)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_contribution_changes_contribution ON contribution_changes(contribution_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_contribution_changes_status ON contribution_changes(status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_admin_logs_admin ON admin_activity_logs(admin_user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_admin_logs_action ON admin_activity_logs(action_type)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_admin_logs_entity ON admin_activity_logs(entity_type, entity_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_admin_logs_time ON admin_activity_logs(created_at DESC)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)')
     
     # Create indexes for authentication tables
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
