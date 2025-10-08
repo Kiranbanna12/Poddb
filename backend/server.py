@@ -15,6 +15,12 @@ from models.podcast import Podcast, PodcastCreate
 from models.episode import Episode
 from models.user import User, UserCreate, UserLogin
 from models.contribution import Contribution, ContributionCreate
+from models.person import PersonCreate, PersonSearch, PersonWithEpisodes
+from models.youtube import (
+    YouTubePlaylistRequest, YouTubeVideoRequest, YouTubePlaylistResponse,
+    YouTubeVideoResponse, EpisodeImportRequest, SeasonCreateRequest,
+    TeamMemberAssignment
+)
 
 # Import auth
 from auth.password import hash_password, verify_password
