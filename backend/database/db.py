@@ -68,12 +68,19 @@ def init_database():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS people (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            full_name TEXT NOT NULL,
             slug TEXT UNIQUE NOT NULL,
             bio TEXT,
-            profile_photo TEXT,
+            profile_photo_path TEXT,
             role TEXT DEFAULT 'Host',
             location TEXT,
+            date_of_birth INTEGER,
+            instagram_url TEXT,
+            youtube_url TEXT,
+            twitter_url TEXT,
+            facebook_url TEXT,
+            linkedin_url TEXT,
+            website_url TEXT,
             created_at INTEGER NOT NULL
         )
     ''')
