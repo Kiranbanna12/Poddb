@@ -17,18 +17,6 @@ const ContributePage = () => {
     loadOptions();
   }, []);
 
-  const loadOptions = async () => {
-    try {
-      const [categoriesData, languagesData] = await Promise.all([
-        getCategories(),
-        getLanguages()
-      ]);
-      setAvailableCategories(categoriesData.map(c => c.name));
-      setAvailableLanguages(languagesData.map(l => l.name));
-    } catch (error) {
-      console.error('Error loading options:', error);
-    }
-  };
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
