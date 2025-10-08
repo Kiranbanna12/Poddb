@@ -329,8 +329,7 @@ test_plan:
     - "YouTube import workflow UI"
     - "SmartSearchCombobox reusable component"
     - "ContributionForm integration"
-  stuck_tasks: 
-    - "YouTube API service integration (API not enabled - 403 error)"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
