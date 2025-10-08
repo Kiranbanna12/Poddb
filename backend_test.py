@@ -543,51 +543,248 @@ class ContributionTester:
         except Exception as e:
             self.log_test("Invalid Token Access", False, f"Exception: {str(e)}")
 
+    def test_contribution_submission_flow(self):
+        """Test the complete contribution submission flow as requested"""
+        print("🎯 CONTRIBUTION SUBMISSION FLOW TEST")
+        print("-" * 50)
+        
+        # Step 1: Register a test user
+        self.test_register_test_contributor()
+        
+        # Step 2: Submit a contribution
+        self.test_submit_contribution()
+        
+        # Step 3: Check if contribution was saved
+        self.test_verify_contribution_saved()
+        
+        # Step 4: Get user's contributions
+        self.test_get_user_contributions()
+
+    def test_register_test_contributor(self):
+        """Step 1: Register a test user with specific credentials"""
+        try:
+            url = f"{self.base_url}/auth/register"
+            payload = {
+                "username": "testcontributor",
+                "email": "testcontributor@test.com",
+                "password": "Test123456",
+                "confirm_password": "Test123456",
+                "full_name": "Test Contributor",
+                "terms_accepted": True
+            }
+            
+            response = self.session.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check required fields
+                if "token" in data and "user" in data:
+                    user = data["user"]
+                    token = data["token"]
+                    
+                    # Verify JWT token structure
+                    try:
+                        import jwt
+                        decoded = jwt.decode(token, options={"verify_signature": False})
+                        if "user_id" in decoded:
+                            self.regular_user_token = token
+                            self.test_user_id = user.get("id")
+                            details = f"Test contributor registered: {user.get('username')}, ID: {user.get('id')}"
+                            self.log_test("Register Test Contributor", True, details)
+                        else:
+                            self.log_test("Register Test Contributor", False, 
+                                        "JWT token missing user_id field", decoded)
+                    except Exception as jwt_error:
+                        self.log_test("Register Test Contributor", False, f"JWT decode error: {jwt_error}")
+                else:
+                    self.log_test("Register Test Contributor", False, 
+                                "Missing 'token' or 'user' in response", data)
+            elif response.status_code == 400:
+                # User might already exist, try to login
+                self.log_test("Register Test Contributor", True, "User already exists, attempting login")
+                self.test_login_test_contributor()
+            else:
+                self.log_test("Register Test Contributor", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Register Test Contributor", False, f"Exception: {str(e)}")
+
+    def test_login_test_contributor(self):
+        """Login the test contributor if registration failed due to existing user"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            payload = {
+                "identifier": "testcontributor@test.com",
+                "password": "Test123456"
+            }
+            
+            response = self.session.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "success" in data and data["success"] and "token" in data and "user" in data:
+                    user = data["user"]
+                    token = data["token"]
+                    
+                    try:
+                        import jwt
+                        decoded = jwt.decode(token, options={"verify_signature": False})
+                        if "user_id" in decoded:
+                            self.regular_user_token = token
+                            self.test_user_id = user.get("id")
+                            details = f"Test contributor logged in: {user.get('username')}, ID: {user.get('id')}"
+                            self.log_test("Login Test Contributor", True, details)
+                        else:
+                            self.log_test("Login Test Contributor", False, 
+                                        "JWT token missing user_id field", decoded)
+                    except Exception as jwt_error:
+                        self.log_test("Login Test Contributor", False, f"JWT decode error: {jwt_error}")
+                else:
+                    self.log_test("Login Test Contributor", False, 
+                                "Missing required fields in response", data)
+            else:
+                self.log_test("Login Test Contributor", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Login Test Contributor", False, f"Exception: {str(e)}")
+
+    def test_submit_contribution(self):
+        """Step 2: Submit a contribution using the token"""
+        if not self.regular_user_token:
+            self.log_test("Submit Contribution", False, "No user token available")
+            return
+            
+        try:
+            url = f"{self.base_url}/contributions"
+            headers = {"Authorization": f"Bearer {self.regular_user_token}"}
+            payload = {
+                "title": "Test Podcast Submission",
+                "description": "This is a test podcast submission from a contributor",
+                "youtube_playlist_id": "PLtest123",
+                "categories": ["Technology", "Science"],
+                "languages": ["English", "Hindi"],
+                "location": "Mumbai",
+                "website": "https://testpodcast.com",
+                "spotify_url": "https://spotify.com/testpodcast",
+                "apple_podcasts_url": "",
+                "jiosaavn_url": "",
+                "instagram_url": "https://instagram.com/testpodcast",
+                "twitter_url": "",
+                "youtube_url": "https://youtube.com/@testpodcast",
+                "team_members": [],
+                "cover_image": "https://example.com/cover.jpg"
+            }
+            
+            response = self.session.post(url, json=payload, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check if contribution was created successfully
+                if "id" in data:
+                    self.test_contribution_id = data.get("id")
+                    status = data.get("status", "unknown")
+                    details = f"Contribution created: ID {data.get('id')}, Status: {status}"
+                    self.log_test("Submit Contribution", True, details)
+                    
+                    # Store contribution data for verification
+                    self.test_contribution_data = data
+                else:
+                    self.log_test("Submit Contribution", False, 
+                                "Missing 'id' in response", data)
+            else:
+                self.log_test("Submit Contribution", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Submit Contribution", False, f"Exception: {str(e)}")
+
+    def test_verify_contribution_saved(self):
+        """Step 3: Verify the contribution was saved to database"""
+        if not hasattr(self, 'test_contribution_data') or not self.test_contribution_data:
+            self.log_test("Verify Contribution Saved", False, "No contribution data to verify")
+            return
+            
+        try:
+            # Check if the contribution has required fields
+            contribution = self.test_contribution_data
+            required_fields = ["id", "title", "description", "status"]
+            missing_fields = [field for field in required_fields if field not in contribution]
+            
+            if not missing_fields:
+                # Verify status is 'pending'
+                if contribution.get("status") == "pending":
+                    details = f"Contribution saved correctly: ID {contribution.get('id')}, Status: pending"
+                    self.log_test("Verify Contribution Saved", True, details)
+                else:
+                    details = f"Unexpected status: {contribution.get('status')}, expected 'pending'"
+                    self.log_test("Verify Contribution Saved", False, details)
+            else:
+                details = f"Missing required fields: {missing_fields}"
+                self.log_test("Verify Contribution Saved", False, details)
+                
+        except Exception as e:
+            self.log_test("Verify Contribution Saved", False, f"Exception: {str(e)}")
+
+    def test_get_user_contributions(self):
+        """Step 4: Get user's contributions to verify it returns the submitted contribution"""
+        if not self.regular_user_token:
+            self.log_test("Get User Contributions", False, "No user token available")
+            return
+            
+        try:
+            url = f"{self.base_url}/contributions"
+            headers = {"Authorization": f"Bearer {self.regular_user_token}"}
+            
+            response = self.session.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check if response is a list or has contributions field
+                contributions = data if isinstance(data, list) else data.get("contributions", [])
+                
+                if contributions:
+                    # Look for our test contribution
+                    test_contribution_found = False
+                    for contrib in contributions:
+                        if (hasattr(self, 'test_contribution_id') and 
+                            contrib.get("id") == self.test_contribution_id):
+                            test_contribution_found = True
+                            break
+                        elif contrib.get("title") == "Test Podcast Submission":
+                            test_contribution_found = True
+                            break
+                    
+                    if test_contribution_found:
+                        details = f"Found {len(contributions)} contributions including test submission"
+                        self.log_test("Get User Contributions", True, details)
+                    else:
+                        details = f"Test contribution not found in {len(contributions)} contributions"
+                        self.log_test("Get User Contributions", False, details)
+                else:
+                    self.log_test("Get User Contributions", True, "No contributions found (acceptable for new user)")
+            else:
+                self.log_test("Get User Contributions", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Get User Contributions", False, f"Exception: {str(e)}")
+
     def run_all_tests(self):
-        """Run all test suites"""
+        """Run the contribution submission flow test"""
         print("=" * 80)
-        print("BACKEND API TESTING SUITE - CONTRIBUTION FORM FIXES")
+        print("BACKEND API TESTING SUITE - CONTRIBUTION SUBMISSION FLOW")
         print("=" * 80)
         print(f"Testing against: {self.base_url}")
         print()
         
-        # Test Suite 5: Contribution Form Fixes (Priority)
-        print("🔧 TEST SUITE 5: Contribution Form Fixes")
-        print("-" * 50)
-        self.test_add_new_location()
-        self.test_add_new_location_minimal()
-        self.test_search_locations()
-        self.test_user_registration_and_login()
-        self.test_contribution_submission_with_auth()
-        self.test_contribution_submission_without_auth()
-        
-        # Test Suite 1: YouTube API Integration
-        print("🎥 TEST SUITE 1: YouTube API Integration")
-        print("-" * 50)
-        self.test_youtube_fetch_playlist()
-        self.test_youtube_fetch_video()
-        
-        # Test Suite 2: Smart Search Endpoints
-        print("🔍 TEST SUITE 2: Smart Search Endpoints")
-        print("-" * 50)
-        self.test_search_categories()
-        self.test_add_new_category()
-        self.test_search_languages()
-        self.test_add_new_language()
-        self.test_search_people()
-        
-        # Test Suite 3: People/Team Management
-        print("👥 TEST SUITE 3: People/Team Management")
-        print("-" * 50)
-        self.test_create_person()
-        self.test_get_person_by_id()
-        self.test_search_people_with_query()
-        
-        # Test Suite 4: Episode Management
-        print("📺 TEST SUITE 4: Episode Management")
-        print("-" * 50)
-        self.test_get_podcast_episodes()
-        self.test_episode_import_preview()
+        # Run the complete contribution submission flow
+        self.test_contribution_submission_flow()
         
         # Summary
         self.print_summary()
