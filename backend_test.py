@@ -1414,46 +1414,9 @@ class ContributionTester:
         self.test_sync_config_update()
 
     def test_create_admin_user(self):
-        """Create an admin user for testing sync endpoints"""
-        try:
-            # First try to register admin user
-            url = f"{self.base_url}/auth/register"
-            payload = {
-                "username": "syncadmin",
-                "email": "syncadmin@poddb.com",
-                "password": "AdminSync123!",
-                "full_name": "Sync Admin User"
-            }
-            
-            response = self.session.post(url, json=payload, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                user_id = data["user"]["id"]
-                
-                # Set user as admin in database
-                import sqlite3
-                try:
-                    conn = sqlite3.connect('/app/backend/database.db')
-                    cursor = conn.cursor()
-                    cursor.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (user_id,))
-                    conn.commit()
-                    conn.close()
-                    
-                    # Now login to get admin token
-                    self.test_admin_login_for_sync()
-                    
-                except Exception as db_error:
-                    self.log_test("Create Admin User", False, f"Database error: {db_error}")
-                    
-            elif response.status_code == 400:
-                # User exists, try to login
-                self.test_admin_login_for_sync()
-            else:
-                self.log_test("Create Admin User", False, f"HTTP {response.status_code}: {response.text}")
-                
-        except Exception as e:
-            self.log_test("Create Admin User", False, f"Exception: {str(e)}")
+        """Use existing admin user for testing sync endpoints"""
+        # Use the existing admin credentials instead of creating new user
+        self.test_admin_login_for_sync()
 
     def test_admin_login_for_sync(self):
         """Login admin user for sync testing"""
