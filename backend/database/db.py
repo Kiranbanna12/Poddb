@@ -318,6 +318,36 @@ def init_database():
             playlist_id TEXT NOT NULL,
             last_synced_at INTEGER,
             auto_sync_enabled INTEGER DEFAULT 1,
+            sync_frequency TEXT DEFAULT 'daily',
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            FOREIGN KEY (podcast_id) REFERENCES podcasts(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Create podcast_platforms table for platform links
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS podcast_platforms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            podcast_id INTEGER NOT NULL,
+            platform_name TEXT NOT NULL,
+            platform_url TEXT NOT NULL,
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            FOREIGN KEY (podcast_id) REFERENCES podcasts(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Create sync_history table for tracking sync operations
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sync_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            podcast_id INTEGER NOT NULL,
+            playlist_id TEXT NOT NULL,
+            sync_status TEXT NOT NULL CHECK(sync_status IN ('success', 'failed', 'partial')),
+            episodes_added INTEGER DEFAULT 0,
+            episodes_updated INTEGER DEFAULT 0,
+            error_message TEXT,
+            sync_duration INTEGER,
+            synced_at INTEGER DEFAULT (strftime('%s', 'now')),
             FOREIGN KEY (podcast_id) REFERENCES podcasts(id) ON DELETE CASCADE
         )
     ''')
