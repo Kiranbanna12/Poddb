@@ -470,44 +470,27 @@ class AdminPanelTester:
         except Exception as e:
             self.log_test("Admin Access Without Token", False, f"Exception: {str(e)}")
 
-    def test_add_new_location(self):
-        """Test Suite 5: Contribution Form Fixes - Add New Location"""
+    def test_admin_access_with_regular_user_token(self):
+        """Test Suite 6: Authorization Tests - Admin Access With Regular User Token"""
+        if not self.regular_user_token:
+            self.log_test("Admin Access With Regular User Token", False, "No regular user token available")
+            return
+            
         try:
-            url = f"{self.base_url}/search/locations/add"
-            params = {
-                "location": "Mumbai",
-                "state": "Maharashtra", 
-                "country": "India"
-            }
+            url = f"{self.base_url}/admin/contributions/stats"
+            headers = {"Authorization": f"Bearer {self.regular_user_token}"}
             
-            response = self.session.post(url, params=params, timeout=10)
+            response = self.session.get(url, headers=headers, timeout=10)
             
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Check required fields in response
-                required_fields = ["location", "name"]
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if missing_fields:
-                    self.log_test("Add New Location", False, 
-                                f"Missing fields: {missing_fields}", data)
-                    return
-                
-                # Verify formatted name
-                expected_name = "Mumbai, Maharashtra, India"
-                if data.get("name") == expected_name:
-                    details = f"Location created: {data['name']}"
-                    self.log_test("Add New Location", True, details)
-                else:
-                    details = f"Name format incorrect. Expected: {expected_name}, Got: {data.get('name')}"
-                    self.log_test("Add New Location", False, details, data)
+            if response.status_code == 403:
+                self.log_test("Admin Access With Regular User Token", True, 
+                            "Correctly returned 403 Forbidden")
             else:
-                self.log_test("Add New Location", False, 
-                            f"HTTP {response.status_code}: {response.text}")
+                self.log_test("Admin Access With Regular User Token", False, 
+                            f"Expected 403, got HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Add New Location", False, f"Exception: {str(e)}")
+            self.log_test("Admin Access With Regular User Token", False, f"Exception: {str(e)}")
 
     def test_add_new_location_minimal(self):
         """Test Suite 5: Contribution Form Fixes - Add New Location (Minimal Data)"""
